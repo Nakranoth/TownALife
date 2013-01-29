@@ -1,19 +1,19 @@
 package city;
 
 public class Task {
-	private	Resource input, output;
+	private	Resource[] input, output;
 	private int minWorkers, maxWorkers;
 	private double efficency, matEfficency;
 	
-	public Task(Resource output, int minWorkers, int maxWorkers, double efficency) {
-		init(output, (Resource)null, minWorkers, maxWorkers, efficency, 0);
+	public Task(Resource[] output, int minWorkers, int maxWorkers, double efficency) {
+		init(output, (Resource[])null, minWorkers, maxWorkers, efficency, 0);
 	}
 	
-	public Task(Resource output, Resource input, int minWorkers, int maxWorkers, double efficency, double matEfficency) {
+	public Task(Resource[] output, Resource[] input, int minWorkers, int maxWorkers, double efficency, double matEfficency) {
 		init(output,input, minWorkers, maxWorkers, efficency, matEfficency);
 	}
 	
-	private void init(Resource output, Resource input, int minWorkers, int maxWorkers, double efficency, double matEfficency){
+	private void init(Resource[] output, Resource[] input, int minWorkers, int maxWorkers, double efficency, double matEfficency){
 		this.input = input;
 		this.output = output;
 		this.minWorkers = minWorkers;
@@ -22,11 +22,14 @@ public class Task {
 		this.matEfficency = matEfficency;
 	}
 	
-	public Resource getInput(){
+	/*
+	 * This pair designed for evaluating this task's net output.
+	 */
+	public Resource[] getInput(){
 		return input;
 	}
 	
-	public Resource getOutput(){
+	public Resource[] getOutput(){
 		return output;
 	}
 	
