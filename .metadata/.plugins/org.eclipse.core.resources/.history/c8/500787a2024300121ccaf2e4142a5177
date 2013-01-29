@@ -1,0 +1,22 @@
+
+public class Person implements Runnable {
+	
+	int age;
+	GenPrefs preferences;
+	
+	
+	public Person()
+	{
+		
+	}
+	
+	public Person(Person parentA, Person parentB)
+	{
+		
+	}
+	
+	public void run()
+	{
+		
+	}
+}

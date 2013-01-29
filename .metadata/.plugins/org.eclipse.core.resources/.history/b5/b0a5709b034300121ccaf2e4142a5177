@@ -1,0 +1,8 @@
+
+public class GenPrefs {
+
+	public GenPrefs(GenPrefs preferences, GenPrefs preferences2) {
+		
+	}
+
+}

@@ -1,0 +1,7 @@
+
+public class Person extends Thread {
+	public void run()
+	{
+		
+	}
+}
