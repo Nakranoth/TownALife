@@ -12,11 +12,11 @@ import people.Person;
 public class City {
 	List<Building> places;
 	List<Person> people;
-	int numGens = -1; 
+	int numYears = 500; 
 	
 	public City() {
 		Init();
-		while(numGens <= 0){
+		while(numYears >= 0){
 			// TODO main logic loop.
 		}
 	}

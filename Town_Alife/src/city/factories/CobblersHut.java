@@ -11,15 +11,9 @@ public class CobblersHut extends Factory {
 	public CobblersHut()
 	{
 		super(costs,5);
-		
+		name = "Cobbler's Hut";
 		Resource[] output = {new Resource("Stone", 1)};
 		addTask(new Task(output, 1, 5, .5));	//2x efficiency from homestead. Still slow.
 	}
-
-	@Override
-	public String toString() {
-		return "Cobbler's Hut";
-	}
-	
 	
 }

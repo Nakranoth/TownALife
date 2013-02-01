@@ -1,6 +1,9 @@
 package people;
 
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.HashMap;
+
+import city.Resource;
 
 /**
  * @author Nathan Killeen
@@ -12,9 +15,15 @@ public class Person{
 			yearSet = {"yearI","yearJ","yearK"};
 	
 	public int age;
+	
 	protected Preferences preferences = new Preferences();
-	@SuppressWarnings("unused")	//TODO REMOVE THIS LINE
-	private int income = 0;	//Tracks how much I made last year counting only direct labor income.
+	
+	private int income = 0;	//Tracks how much I made last year, used for resource allocation.
+	private long money = 0;
+	private HashMap<String, Resource> holdings;
+	private HashMap<String, Allocation> savings = new HashMap<String, Allocation>();
+	private ArrayList<Person> heirs = new ArrayList<Person>();
+	private Person spouse = null; 
 	
 	public Person()
 	{
@@ -27,6 +36,11 @@ public class Person{
 		preferences.put("yearJAlloc", 0.2);
 		preferences.put("yearK", 20.0);
 		preferences.put("yearKAlloc", 0.2);
+	}
+	
+	public Person(Preferences prefs)
+	{
+		preferences = prefs;
 	}
 	
 	public Person(Person parentA, Person parentB)
@@ -59,7 +73,7 @@ public class Person{
 		return preferences; 
 	}
 	
-	public static void main(String[] args)
+	/*public static void main(String[] args)
 	{
 		Person a = new Person();
 		Person b = new Person();
@@ -75,5 +89,5 @@ public class Person{
 		}
 		
 		return;
-	}
+	}*/
 }

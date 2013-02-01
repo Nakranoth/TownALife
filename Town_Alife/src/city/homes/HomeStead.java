@@ -12,6 +12,8 @@ public class HomeStead extends Home {
 	{
 		super(costs,3);
 		
+		name = "Homestead";
+		
 		Resource[] output1 = {new Resource("Wood",1)};		//always use 1 for amount in tasks.
 		addTask(new Task(output1, 1, 2, .25));		//Homesteads are Terrible sources of income.
 		
@@ -24,10 +26,9 @@ public class HomeStead extends Home {
 		Resource[] output4 = {new Resource("Tool",1)};
 		Resource[] input4 = {new Resource("Metal",1)};
 		addTask(new Task(output4, input4, 1, 1, .1, .5));	//1 yr + 20 metal = 10 tools
+		
+		Resource[] output5 = {new Resource("Crop", 1)};	// 10/person/year to live.
+		addTask(new Task (output5, 1, 3, .5));		//1 person can feed 5 at full year.
 	}
 
-	@Override
-	public String toString() {
-		return "Homestead";
-	}
 }

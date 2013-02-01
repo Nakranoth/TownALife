@@ -9,11 +9,12 @@ public abstract class Building {
 	List<Task> tasks;
 	ArrayList<ArrayList<Person>> workerList;	//used to determine worker standings.
 	Resource[] cost;
+	protected String name;
 	
-	protected Building(Resource[] cost)
+	protected Building(Resource[] cost, ArrayList<Person> owners)
 	{
 		this.cost = cost;
-		workerList.add(new ArrayList<Person>());	//Owner(s)
+		workerList.add(owners);	//Owner(s)
 		workerList.add(new ArrayList<Person>());	//Heir(s)
 		workerList.add(new ArrayList<Person>());	//Worker(s)
 	}
@@ -31,7 +32,10 @@ public abstract class Building {
 		
 	}
 	
-	public abstract String toString();
 	public abstract void trimToCapacity();
 
+	public String toString()
+	{
+		return name;
+	}
 }
