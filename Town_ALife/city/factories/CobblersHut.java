@@ -9,13 +9,25 @@ import city.Task;
 
 public class CobblersHut extends Factory {
 
-	static Bundle costs = new Bundle(new ResourcePile(Resource.wood,25)); 
+	static Bundle costs = new Bundle(new ResourcePile(Resource.wood,250)); 
 	
-	public CobblersHut()
+	public CobblersHut(int ordinal)
 	{
-		super(costs, 5);
+		super(costs, 5,ordinal);
 		name = "Cobbler's Hut";
-		tasks.add(new Task(Resource.stone, 5, .5,SkillType.quarryer));	//2x efficiency from homestead. Still slow.
+		tasks.add(new Task(Resource.stone, 5, 50,SkillType.quarryer));	//2x efficiency from homestead. Still slow.
+	}
+
+	public CobblersHut(CobblersHut clone){
+		super(costs, 5,clone.ordinal, clone.tasks);
+		name = clone.name;
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public <E extends Factory> E shallowClone() {
+		// TODO Auto-generated method stub
+		return (E) new CobblersHut(this);
 	}
 	
 }

@@ -12,7 +12,7 @@ public class Villa extends Home {
 	
 	public Villa()
 	{
-		super(costs, 7, 10.0);
+		super(costs, 7, 2.7, 7.0);
 		
 		name = "Villa";
 	}

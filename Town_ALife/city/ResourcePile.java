@@ -4,16 +4,23 @@ package city;
  *	Tracks how much of a resource is in a pool.
  */
 
-public class ResourcePile{
+public class ResourcePile implements Comparable<ResourcePile>{
 	public static enum Resource{wood,stone,crops,metal,tools,crafts,goods,food};
 	public Resource type;
-	public int amount;
-	public ResourcePile(Resource type, int amount){
+	public Long amount;
+	public ResourcePile(Resource type, long amount){
 		this.type = type;
 		this.amount = amount;
 	}
 	public ResourcePile(ResourcePile have) {
 		type = have.type;
 		amount = have.amount;
+	}
+	@Override
+	public int compareTo(ResourcePile o) {
+		return -type.compareTo(type);
+	}
+	public double getValue() {
+		return amount * City.economy.prices[type.ordinal()];
 	}
 }

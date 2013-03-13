@@ -12,7 +12,7 @@ public class Shack extends Home {
 	
 	public Shack()
 	{
-		super(costs,3, 1.0);
+		super(costs,3, 2.1, 1.0);
 		
 		name = "Shack";
 	}

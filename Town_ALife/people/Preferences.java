@@ -1,18 +1,73 @@
 package people;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
+import java.util.Scanner;
 import java.util.Set;
 
 public class Preferences {
+
+	//private static final int FILE_SIZE = 1713;
+	
+	//Set of all preferences for easy access.
+	public static enum Preference {stubbornness,timeScale,incomeAlloc,goodsAlloc,
+		upkeepAlloc,upkeepCap,newHomeAlloc,childAlloc,greed,craftUtil,
+		goodUtil,foodUtil,homeUtil,need,love, smallestAlloc};
+		
+	public static File loadFrom = null;
+	private static ArrayList<Preferences> loaded = new ArrayList<Preferences>();
+	private static Random gen = new Random();
 	
 	private static double MUT_CHANCE = 0.2;
 	private static double MUT_DEGREE = 0.05;	//should be < 1, percent of current value
 	
-	public HashMap<String,Double> preferences = new HashMap<String,Double>();	//core object handled via call through functions.
+	public HashMap<Preference,Double> preferences = new HashMap<Preference,Double>();	//core object handled via call through functions.
+
+	public Preferences() {
+		// TODO Auto-generated constructor stub
+	}
+	
+	public static Preferences loadPref(File fromFile){
+		if (loadFrom == null) loadPreferences(fromFile);
+		return GenPrefs(loaded.get(gen.nextInt(loaded.size())),loaded.get(gen.nextInt(loaded.size())));
+	}
+	
+	public static void loadPreferences(File prefSet) {
+		if (loadFrom == null){
+			try {
+				loadFrom = prefSet;
+				Scanner lineIter = new Scanner(prefSet);
+				lineIter.useDelimiter(",\n?");
+				String flag = null;
+				double value = 0;
+				int i = 0;
+				Preferences insert = new Preferences();
+				while (lineIter.hasNext()){
+					flag = lineIter.next();	//gets a pair
+					value = lineIter.nextDouble();
+					insert.put(Enum.valueOf(Preference.class, flag), value);
+					if (i%Preference.values().length == Preference.values().length - 1){
+						//insert.put(Preference.smallestAlloc, 0.01); i++;	//temporary to load new value type.
+						loaded.add(insert);
+						insert = new Preferences();
+					}
+					i++;
+				}
+				lineIter.close();
+			} catch (FileNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		// TODO Auto-generated constructor stub
+	}
+	
 	/**
 	 * @param prefs1 Parent 1 for genetics
 	 * @param prefs2 Parent 2 for genetics
@@ -22,12 +77,11 @@ public class Preferences {
 		//Iterator prefs1i = prefs1.preferences.entrySet().iterator();
 		
 		Double pref1, pref2, curr;
-		Random gen = new Random();
 		
-		for(Map.Entry<String, Double> i: prefs1.entrySet()){
-			String key = i.getKey();
+		for(Map.Entry<Preference, Double> i: prefs1.entrySet()){
+			Preference key = i.getKey();
 			pref1 = i.getValue();
-			pref2 = prefs2.get(key);	//TODO add null checks?
+			pref2 = prefs2.get(key);
 			if(gen.nextInt(2) == 0){
 				curr = pref1;
 			}
@@ -43,24 +97,24 @@ public class Preferences {
 		}
 		return newPrefs;
 	}
-	
-	public Double put(String key, Double value){
+
+	public Double put(Preference key, Double value){
 		return preferences.put(key, value);
 	}
 	
-	public Double get(String key){
+	public Double get(Preference key){
 		return preferences.get(key);
 	}
 
-	public Set<Entry<String, Double>> entrySet(){
+	public Set<Entry<Preference, Double>> entrySet(){
 		return preferences.entrySet();
 	}
 
 	//linear transformation; maps smallest value to minimum; maximum is what you would get if all values are same, except one larger.  
-	public void normalize(String[] keys, double minimum, double maximum) {
+	public void normalize(Preference[] keys, double minimum, double maximum) {
 		double min = Double.MAX_VALUE;
 		double curr;
-		for (String key : keys)
+		for (Preference key : keys)
 		{
 			curr = preferences.get(key);
 			if (curr < min)
@@ -70,26 +124,26 @@ public class Preferences {
 		}
 		//shift to 0, and sum.
 		double sum = 0.0;
-		for (String key : keys)
+		for (Preference key : keys)
 		{
 			preferences.put(key, preferences.get(key) - min);
 			sum += preferences.get(key);
 		}
 		
 		double scale = (maximum - minimum) / sum;
-		for (String key : keys)
+		for (Preference key : keys)
 		{
 			preferences.put(key, preferences.get(key) * scale + minimum);
 		}
 	}
 
-	public void sort(String[] sortSet) {
-		HashSet<String> sorted = new HashSet<String>();
-		String curr;
+	public void sort(Preference[] sortSet) {
+		HashSet<Preference> sorted = new HashSet<Preference>();
+		Preference curr;
 		do
 		{
 			curr = null;
-			for (String key : sortSet)
+			for (Preference key : sortSet)
 			{
 				if (!sorted.contains(key))
 				{
@@ -100,8 +154,8 @@ public class Preferences {
 			if (curr == null) break; //save some time here
 			
 			double minVal = Double.MAX_VALUE;
-			String minKey = null;
-			for (String key : sortSet)
+			Preference minKey = null;
+			for (Preference key : sortSet)
 			{
 				if (!sorted.contains(key) && preferences.get(key) < minVal)
 				{
@@ -119,14 +173,37 @@ public class Preferences {
 		}while(curr != null);
 	}
 	
-	public void setMinimum(String[] keys,double minimum)
+	public void setMinimum(Preference key,double minimum)
 	{
-		for(String key: keys)
-		{
-			if (preferences.get(key) < minimum)
-			{
-				preferences.put(key, minimum);
-			}
+		if (preferences.get(key) < minimum){
+			preferences.put(key, minimum);
 		}
+	}
+
+	public void setMaximum(Preference key, double maximum) {
+		if (preferences.get(key) > maximum){
+			preferences.put(key, maximum);
+		}
+	}
+	
+	public String toString(){
+		String string = new String();
+		
+		for(Map.Entry<Preference, Double> i: entrySet()){
+			Preference key = i.getKey();
+			Double val = i.getValue();
+			
+			string +=key.toString()+","+val.toString()+",";
+		}
+		string += '\n';
+		return string;
+	}
+
+	/**
+	 * Cleans up statics for next run.
+	 */
+	public static void clearLoads() {
+		loaded.clear();
+		loadFrom = null;
 	}
 }

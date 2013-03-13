@@ -12,7 +12,7 @@ public class Homestead extends Home {
 	
 	public Homestead()
 	{
-		super(costs, 5, 3.0);
+		super(costs, 5, 2.3, 3.0);
 		
 		name = "Homestead";
 	}

@@ -1,10 +1,10 @@
 package city;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 
 import city.ResourcePile.Resource;
-import economy.Economy;
 
 /**
  * Collection of ResourcePiles.
@@ -13,7 +13,6 @@ import economy.Economy;
  */
 public class Bundle implements Iterable<ResourcePile>{
 	public ArrayList<ResourcePile> contents = new ArrayList<ResourcePile>();
-	private static Economy economy = City.economy;
 	
 	/**
 	 * Conversion from pile array.
@@ -21,7 +20,7 @@ public class Bundle implements Iterable<ResourcePile>{
 	 */
 	public Bundle(ResourcePile[] pileSet){
 		for(ResourcePile pile: pileSet){
-			contents.add(pile);
+			if (pile.amount > 0) contents.add(new ResourcePile(pile));	//new for separation safety.
 		}
 	}
 
@@ -29,23 +28,24 @@ public class Bundle implements Iterable<ResourcePile>{
 	 * Bundle initialized to contain one ResourcePile
 	 */
 	public Bundle(ResourcePile resourcePile) {
-		contents.add(resourcePile);
+		if (resourcePile.amount > 0)	contents.add(new ResourcePile(resourcePile));
 	}
 
 	public Bundle() {//seriously? I need to add this?
 	}
-
+	
 	/**
 	 * Intelligently adds the inserted pile to the bundle.
 	 */
 	public void insert(ResourcePile inserted) {
+		if(inserted.amount <=0) return;	//avoid empty piles.
 		for (ResourcePile curr:contents){
 			if (curr.type == inserted.type){
 				curr.amount += inserted.amount;
 				return;
 			}
 		}
-		contents.add(inserted);
+		contents.add(new ResourcePile(inserted));	//We do NOT want multiple bundles accidently attached to each other.
 	}
 	
 	/**
@@ -58,7 +58,35 @@ public class Bundle implements Iterable<ResourcePile>{
 	}
 
 	/**
-	 * Returns the whole number of times this fits completely into divisor.
+	 * Removes the bundle from this.
+	 */
+	public void extract(Bundle removed){
+		ResourcePile curr;
+		for(Iterator<ResourcePile> i = removed.iterator();i.hasNext();){
+			curr = i.next();
+			extract(curr);
+		}
+		for(Iterator<ResourcePile> i = removed.iterator();i.hasNext();){
+			curr = i.next();
+			if (curr.amount <= 0) i.remove();
+		}
+	}
+	
+	/**
+	 * Removes a single pile from this.
+	 */
+	private void extract(ResourcePile removed) {
+		for (ResourcePile curr:contents){
+			if (curr.type == removed.type){
+				curr.amount -= removed.amount;	
+				//if (curr.amount <= 0) contents.remove(curr);// NO NEGATIVES!
+				return;
+			}
+		}
+	}
+
+	/**
+	 * Returns the number of times this fits into divisor as constrained by the smallest difference.
 	 */
 	public double over(Bundle divisor) {
 		double result = Float.MAX_VALUE;
@@ -75,17 +103,6 @@ public class Bundle implements Iterable<ResourcePile>{
 		return result;
 	}
 
-	/**
-	 * Returns a new bundle representing this bundle, split divisor ways 
-	 */
-	public Bundle over(int divisor) {
-		Bundle result = new Bundle();
-		for(ResourcePile pile:contents){
-			result.insert(new ResourcePile(pile.type, pile.amount / divisor));
-		}
-		return result;
-	}
-	
 	/**
 	 * Returns a new bundle representing this bundle, split divisor ways
 	 */
@@ -150,7 +167,7 @@ public class Bundle implements Iterable<ResourcePile>{
 			for(ResourcePile used:goal){
 				if (copy.type == used.type){
 					copy.amount -= used.amount;
-					if (copy.amount < 0) copy.amount = 0;
+					if (copy.amount < 0) copy.amount = 0L;
 					break;
 				}
 			}
@@ -175,10 +192,10 @@ public class Bundle implements Iterable<ResourcePile>{
 	/**
 	 * Returns the total value of this bundle based on the economy's current prices.
 	 */
-	public long getValue(){
-		long total = 0;
+	public double getValue(){
+		double total = 0;
 		for (ResourcePile pile:contents){
-			total += pile.amount * economy.prices[pile.type.ordinal()];
+			total += pile.amount * City.economy.prices[pile.type.ordinal()];
 		}
 		return total;
 	}
@@ -186,10 +203,10 @@ public class Bundle implements Iterable<ResourcePile>{
 	/**
 	 * Returns the price of the most expensive type of resource in this bundle.
 	 */
-	public int getMostExpensive() {
-		int price = 0;
+	public double getMostExpensiveValue() {
+		double price = 0;
 		for (ResourcePile pile:contents){
-			int currPrice = economy.prices[pile.type.ordinal()];
+			double currPrice = City.economy.prices[pile.type.ordinal()];
 			if(currPrice > price){
 				price = currPrice;
 			}
@@ -198,14 +215,22 @@ public class Bundle implements Iterable<ResourcePile>{
 	}
 	
 	/**
+	 * Returns the Nth most expensive resource pile, where 0 is the most expensive.
+	 */
+	private ResourcePile getNthMostExpensive(int n){
+		Collections.sort(contents);	
+		return contents.get(n);
+	}
+	
+	/**
 	 * Returns the type of the least expensive resource in this bundle.
 	 * Used for minimizing value lost to trading.
 	 */
-	public Resource getLeastExpensive() {
-		int price = Integer.MAX_VALUE;
+	public Resource getLeastExpensiveType() {
+		double price = Double.POSITIVE_INFINITY;
 		Resource type = null;
 		for (ResourcePile pile:contents){
-			int currPrice = economy.prices[pile.type.ordinal()];
+			double currPrice = City.economy.prices[pile.type.ordinal()];
 			if(currPrice < price){
 				price = currPrice;
 				type = pile.type;
@@ -220,7 +245,10 @@ public class Bundle implements Iterable<ResourcePile>{
 	public Bundle times(Double scale) {
 		Bundle result = new Bundle();
 		for (ResourcePile pile:contents){
-			result.insert(new ResourcePile(pile.type,(int) (pile.amount * scale)));
+			ResourcePile insert = new ResourcePile(pile.type,(int) (pile.amount * scale));
+			if(insert.amount > 0){
+				result.insert(insert);
+			}
 		}
 		return result;
 	}
@@ -233,5 +261,68 @@ public class Bundle implements Iterable<ResourcePile>{
 			if (curr.type == type) return curr;
 		}
 		return new ResourcePile(type, 0);
+	}
+
+	/**
+	 * Returns nearly the cheapest bundle worth at least maxPrice containted in this bundle.
+	 * Also remove that bundle from this one.
+	 */
+	public Bundle worthAtLeast(double maximumPrice) {
+		double value = getValue();
+		if (value < maximumPrice) return null;	//I want to cause null pointers if this ever happens.
+		Bundle divvy = this.times(maximumPrice/value);	//good starting guess.
+		Bundle leftover = this.minus(divvy);//What I have left to allocate.
+		
+		int n = 0;
+		while(n < leftover.contents.size() && divvy.getValue() < maximumPrice){
+			ResourcePile nth = leftover.getNthMostExpensive(n);
+			if (divvy.getValue() + nth.getValue() < maximumPrice){
+				divvy.insert(nth);
+			}
+			else{
+				divvy.insert(new ResourcePile(nth.type,(int) (nth.amount*(City.economy.prices[nth.type.ordinal()]/(maximumPrice-divvy.getValue())))));
+			}
+			n++;
+		}
+		leftover = this.minus(divvy);//updated for stuffs shoved in.
+		n = leftover.contents.size() - 1;
+		while(n >= 0 && divvy.getValue() < maximumPrice){
+			divvy.insert(leftover.getNthMostExpensive(n));//give it all leftovers until we have enough. Last ditch effort.
+			n--;
+		}
+		if (divvy.getValue() < maximumPrice) return null;	//This should not be possible.
+
+		extract(divvy);
+		return divvy;
+	}
+
+	/**
+	 * Gets the ratio of each Resource in this over denominator
+	 */
+	public double[] ratios(Bundle denominator) {
+		double[] ratios = new double[Resource.values().length];
+		for(int i = 0; i < Resource.values().length; i++)	ratios[i] = 0.0;
+	
+		for(ResourcePile pile:this){
+			long denAmount = denominator.getResource(pile.type).amount;
+			if(denAmount != 0){
+				ratios[pile.type.ordinal()] = (double)pile.amount / (double)denAmount;
+			}
+			else{
+				ratios[pile.type.ordinal()] = Double.POSITIVE_INFINITY;
+			}
+		}
+		return ratios;
+	}
+
+	/**
+	 * Gets a bundle with each of this bundle's resources scaled by ratio[]. 
+	 */
+	public Bundle times(double[] ratios) {
+		Bundle times = new Bundle();
+		for(ResourcePile pile:this){
+			times.insert(new ResourcePile(pile.type,(int) (pile.amount*ratios[pile.type.ordinal()])));
+		}
+		return times;
 	}
 }

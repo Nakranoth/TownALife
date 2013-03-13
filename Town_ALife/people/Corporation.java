@@ -1,34 +1,160 @@
 package people;
 
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.ListIterator;
 
+import people.Person.SkillType;
+import people.Preferences.Preference;
 import city.Bundle;
+import city.City;
 import city.Factory;
 import city.ResourcePile;
-import city.ResourcePile.Resource;
 import error.BadSellerException;
 
-public class Corporation {
+public class Corporation{
 	//private Economy economy = City.economy;
 	
-	private ArrayList<CorpMember> members;
+	private ArrayList<CorpMember> members = new ArrayList<CorpMember>();
 	public Factory holding = null;
 	public ResourcePile income = null;
-	public Bundle operatingCost = null;
-	public Person workers[];
+	public Allocation operatingCost = new Allocation();
+	public LinkedList<Person> workers = new LinkedList<Person>();
+
+	private LinkedList<Double> annualProfits = new LinkedList<Double>();
+	public double annualProfit;
+	public double cheapestStock;	//The cheapest stock available for sale.
+	public Double profitRatio = Double.POSITIVE_INFINITY;
+	public CorpMember cheapestSeller = null;
 	
-	public Resource output;
-	public int wage; 
+	public Double wage;	//the value of the wage, rather than the number of the good.
 	
 	public Corporation(Factory holding, Person owner){
 		this.holding = holding;
+		operatingCost.goal = holding.getOperatingCost();
 		members.add(new CorpMember(owner, 100));
-		workers = new Person[holding.getCapacity()];
+		cheapestSeller = members.get(0);
+		double profitGuess = holding.getProfitability(operatingCost.goal);
+		while(annualProfits.size() < 10){
+			annualProfits.push(profitGuess);
+		}
+		annualProfit = profitGuess;
+	}
+	
+	/**
+	 * Computes, stores, and returns the wage this corp will pay out.
+	 * If wage is zero, predicted profit was zero or less, so wages should fall.
+	 */
+	public double setWage(){
+		wage = 0D;
+		double profitability = holding.getProfitability(operatingCost.resources);
+		for(CorpMember owner:members){
+			if(owner.person.alive){	//ignore the dead.
+				double greed = owner.person.preferences.get(Preference.greed);
+				wage += Math.max(profitability * Math.max(0.001,greed),0D)*owner.ownership/100D;
+			}
+		}
+		return wage / holding.getTaskCapacity();
+	}
+	
+	/**
+	 * Hires workers for this year.
+	 * @param workPool The collection of unemployed people old enough to work. Modified by this call.
+	 * @return Whether we hired anyone.
+	 */
+	public int hire(ArrayList<Person> workPool){
+		SkillType active = holding.getRelevantSkill();
+		if (active == null) return 0;	//no active skill is bad.
+		workers.clear();
+		int capacity = holding.getTaskCapacity();
+		
+		for (Person worker:workPool){
+			//do an insertion Sort.
+			ListIterator<Person> i = workers.listIterator();
+			while(i.hasNext()){
+				Person next = i.next();
+				if(next.getSkill(active) > worker.getSkill(active)){
+					i.previous();
+					i.add(worker);
+					break;
+				}
+			}
+			if(!i.hasNext()){	//we reached the end of the list.
+				i.add(worker);
+			}
+			if (workers.size() > capacity) workers.pop();
+		}
+		for(Person hired:workers){
+			workPool.remove(hired);	//happens in corp loop. No error!
+		}
+		return workers.size();
+	}
+	
+	/**
+	 * Handles all work and payments.
+	 */
+	public void doWork(){
+		income = holding.doWork(workers, operatingCost.resources);
+		ResourcePile payment = new ResourcePile(income.type, (int) (wage/City.economy.prices[income.type.ordinal()]));
+		
+		for(Person employee:workers){
+			employee.income.insert(payment);
+		}
+		income.amount -= Math.min(payment.amount * workers.size(),income.amount);
+		
+		for (CorpMember toPay:members){
+			toPay.person.income.insert(new ResourcePile(income.type,(int) (income.amount*(toPay.ownership / 100.0D))));	//Rounding errors are okay. Just means loss to inefficiency.
+		}
+		
+		//update stats
+		double currProfit = holding.getProfitability();
+		annualProfits.push(currProfit);
+		annualProfit += (currProfit - annualProfits.removeLast())/10;
+		
+		updateCheapest();
+	}
+	
+
+	private void updateCheapest() {
+		cheapestSeller = null;
+		cheapestStock = Double.POSITIVE_INFINITY;
+		for(CorpMember seller:members){
+			if (seller.person.alive){
+				long sellerPrice = (long) (seller.person.preferences.get(Preference.timeScale) * annualProfit / 100);
+				if (sellerPrice < cheapestStock){
+					cheapestSeller = seller;
+					cheapestStock = sellerPrice;
+				}
+			}
+		}
+		profitRatio = cheapestStock/(annualProfit/100D);
+	}
+
+	/**
+	 * Directly barters for as many stocks as the buyer wants.
+	 * @param buyer The person trying to buy
+	 * @param available The "resources" bundle from the relevant allocation.
+	 */
+	public void buyShares(Person buyer, Bundle available){
+		double worth = buyer.preferences.get(Preference.timeScale) * annualProfit / 100;
+		while (available.getValue() > cheapestStock && cheapestSeller.person != buyer && cheapestStock < worth){
+			int shares = Math.min(cheapestSeller.ownership, (int)(available.getValue() / cheapestStock));
+			double maximumPrice = cheapestStock * shares;
+			try {
+				transferOfOwnership(cheapestSeller.person, buyer, shares);
+				Bundle barter = available.worthAtLeast(maximumPrice);
+				cheapestSeller.person.income.insert(barter);//Give barter to seller.
+			} catch (BadSellerException e) {
+				e.printStackTrace();
+			}
+			updateCheapest();
+		}
 	}
 	
 	
-	public void saleOfOwnership(Person seller, Person buyer, int shares) throws BadSellerException
-	{
+	public void partialTransferOfOwnership(Person seller, Person buyer, int shares) throws BadSellerException {
+		// TODO Auto-generated method stub		
 		CorpMember corpSeller = null, corpBuyer = null;
 		for (CorpMember member: members)
 		{
@@ -41,10 +167,24 @@ public class Corporation {
 			corpBuyer = new CorpMember(buyer, shares);
 			members.add(corpBuyer);
 			corpSeller.ownership -= shares;
-			if (corpSeller.ownership == 0)
-			{
-				members.remove(corpSeller);
-				corpSeller.person.dropCorp(this);
+		}
+		if(corpSeller.ownership <= 0) {
+			members.remove(corpSeller);	//No remote drop. This way we avoid concurrency errors during death.
+		}
+	}
+	
+	public void transferOfOwnership(Person seller, Person buyer, int shares) throws BadSellerException	{
+		partialTransferOfOwnership(seller, buyer, shares);
+		dropEmptyMembers();
+	}
+	
+	public void dropEmptyMembers(){
+		CorpMember member;
+		for (Iterator<CorpMember> i = members.iterator(); i.hasNext();){
+			member = i.next();
+			if(member.ownership <= 0) {
+				member.person.dropCorp(this);
+				i.remove();
 			}
 		}
 	}
@@ -61,24 +201,28 @@ public class Corporation {
 		return shares;
 	}
 	
-	public void redistribute(Person died){
+	/**
+	 * Handles cleaning out dead members the rest of the way.
+	 * Returns whether it should fold.
+	 */
+	public boolean redistribute(){
+		if (members.size() == 0) return true;
 		CorpMember diedMember = null;
 		for (CorpMember member:members){
-			if (member.person == died){
+			if (!member.person.alive){
 				diedMember = member;
 				break;
 			}
 		}
+		if (diedMember == null) return false; 
+		members.remove(diedMember);	//get the dead one out the way.
 		int total = 0;	//used to force 100 shares at end.
-		if (members.size() > 1){
+		if (members.size() != 0 && diedMember.ownership < 100){
 			for(CorpMember member:members){
-				if (member.person!= died){
-					float growth = member.ownership / (100 - diedMember.ownership);
-					member.ownership += member.ownership * growth;
-					total += member.ownership;
-				}
+				float growth = member.ownership / (100 - diedMember.ownership);
+				member.ownership += member.ownership * growth;
+				total += member.ownership;
 			}
-			members.remove(diedMember);	//get the dead one out the way.
 			if (total != 100){	//Fudge back to 100 total.
 				for(CorpMember member:members){
 					if (member.ownership > total - 100){
@@ -89,8 +233,19 @@ public class Corporation {
 			}
 		}
 		else{
-			holding.derilict = true;
 			members.remove(diedMember);
+			return true;	//This corp has folded, even though it's holding hasn't collapsed yet.
 		}
+		return false;
+	}
+	
+	public boolean checkHoldings(){
+		if (holding.ordinal == -1){	//refund this back to corp owners
+			for(CorpMember member:members){
+				member.person.income.insert(operatingCost.resources.times(member.ownership/100D));
+			}
+			return true;
+		}
+		return false;
 	}
 }
