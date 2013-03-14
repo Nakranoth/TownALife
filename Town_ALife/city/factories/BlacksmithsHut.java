@@ -17,8 +17,8 @@ public class BlacksmithsHut extends Factory {
 		super(costs, 1,ordinal);
 		name = "Blacksmith's Hut";
 //tasks.add(new Task(Resource.food, Resource.crops, 2, 20, 0.667,SkillType.chef));	//30 crops to 20 food	
-		tasks.add(new Task(Resource.tools, Resource.metal, 1, 10, .5,SkillType.blackSmith));	//1 yr + 20 metal = 10 tools
-		tasks.add(new Task(Resource.goods, Resource.metal, 1, 5, .5,SkillType.blackSmith));	//Very expensive.
+		tasks.add(new Task(Resource.tools, Resource.metal, 4, 30, .5,SkillType.blackSmith));	//1 yr + 20 metal = 10 tools
+		tasks.add(new Task(Resource.goods, Resource.metal, 3, 20, .5,SkillType.blackSmith));	//Very expensive.
 	}
 
 	public BlacksmithsHut(BlacksmithsHut clone){

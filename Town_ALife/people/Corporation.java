@@ -22,8 +22,8 @@ public class Corporation{
 	public Allocation operatingCost = new Allocation();
 	public LinkedList<Person> workers = new LinkedList<Person>();
 
-	private LinkedList<Double> annualProfits = new LinkedList<Double>();
-	public double annualProfit;
+	//private LinkedList<Double> annualProfits = new LinkedList<Double>();
+	public double annualProfitability;	//How much a corp expects to be able to make every year, if it can hire workers.
 	public double cheapestStock;	//The cheapest stock available for sale.
 	public Double profitRatio = Double.POSITIVE_INFINITY;
 	public CorpMember cheapestSeller = null;
@@ -35,11 +35,7 @@ public class Corporation{
 		operatingCost.goal = holding.getOperatingCost();
 		members.add(new CorpMember(owner, 100));
 		cheapestSeller = members.get(0);
-		double profitGuess = holding.getProfitability(operatingCost.goal);
-		while(annualProfits.size() < 10){
-			annualProfits.push(profitGuess);
-		}
-		annualProfit = profitGuess;
+		annualProfitability = holding.getProfitability(operatingCost.goal);;//smoothed profit function.
 	}
 	
 	/**
@@ -48,14 +44,19 @@ public class Corporation{
 	 */
 	public double setWage(){
 		wage = 0D;
-		double profitability = holding.getProfitability(operatingCost.resources);
+		
+		double currProfit = holding.getProfitability(operatingCost.resources);
+		annualProfitability += (currProfit - annualProfitability)/5;
+		updateCheapest();
+		
 		for(CorpMember owner:members){
 			if(owner.person.alive){	//ignore the dead.
 				double greed = owner.person.preferences.get(Preference.greed);
-				wage += Math.max(profitability * Math.max(0.001,greed),0D)*owner.ownership/100D;
+				wage += Math.max(currProfit * Math.max(0.001,greed),0D)*owner.ownership/100D;
 			}
 		}
-		return wage / holding.getTaskCapacity();
+		wage = wage / holding.getTaskCapacity();	//better to store as per person.
+		return wage;
 	}
 	
 	/**
@@ -94,25 +95,19 @@ public class Corporation{
 	/**
 	 * Handles all work and payments.
 	 */
-	public void doWork(){
+	public void doWork(){	//Must be called on everyone to cause profits to be updated.
 		income = holding.doWork(workers, operatingCost.resources);
+		ResourcePile income = this.income;	//leave this.income in tact. incomeValue = City.economy.prices[income.type.ordinal()] * income.amount;
 		ResourcePile payment = new ResourcePile(income.type, (int) (wage/City.economy.prices[income.type.ordinal()]));
-		
+
 		for(Person employee:workers){
 			employee.income.insert(payment);
 		}
 		income.amount -= Math.min(payment.amount * workers.size(),income.amount);
-		
+
 		for (CorpMember toPay:members){
 			toPay.person.income.insert(new ResourcePile(income.type,(int) (income.amount*(toPay.ownership / 100.0D))));	//Rounding errors are okay. Just means loss to inefficiency.
 		}
-		
-		//update stats
-		double currProfit = holding.getProfitability();
-		annualProfits.push(currProfit);
-		annualProfit += (currProfit - annualProfits.removeLast())/10;
-		
-		updateCheapest();
 	}
 	
 
@@ -121,14 +116,14 @@ public class Corporation{
 		cheapestStock = Double.POSITIVE_INFINITY;
 		for(CorpMember seller:members){
 			if (seller.person.alive){
-				long sellerPrice = (long) (seller.person.preferences.get(Preference.timeScale) * annualProfit / 100);
+				long sellerPrice = (long) (seller.person.preferences.get(Preference.timeScale) * annualProfitability / 100);
 				if (sellerPrice < cheapestStock){
 					cheapestSeller = seller;
 					cheapestStock = sellerPrice;
 				}
 			}
 		}
-		profitRatio = cheapestStock/(annualProfit/100D);
+		profitRatio = cheapestStock/(annualProfitability/100D);
 	}
 
 	/**
@@ -137,7 +132,7 @@ public class Corporation{
 	 * @param available The "resources" bundle from the relevant allocation.
 	 */
 	public void buyShares(Person buyer, Bundle available){
-		double worth = buyer.preferences.get(Preference.timeScale) * annualProfit / 100;
+		double worth = buyer.preferences.get(Preference.timeScale) * annualProfitability / 100;
 		while (available.getValue() > cheapestStock && cheapestSeller.person != buyer && cheapestStock < worth){
 			int shares = Math.min(cheapestSeller.ownership, (int)(available.getValue() / cheapestStock));
 			double maximumPrice = cheapestStock * shares;

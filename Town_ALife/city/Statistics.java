@@ -33,7 +33,7 @@ public class Statistics {
 		population = new ArrayList<String>();	//Total, % male, mean util, util deviation, home type counts.
 		corps = new ArrayList<String>();
 		
-		String construct = new String();
+		String construct = new String("Year,");
 		String[] resources = new String[Resource.values().length];
 		for(Resource type:Resource.values()){
 			resources[type.ordinal()] = type.name();
@@ -45,8 +45,8 @@ public class Statistics {
 		demands.add(construct);
 		prices.add(construct);
 		
-		population.add( new String("Total,Percent Male,Mean Utility,Utility Standard Deviation, Homeless,Shack,Homestead,Villa"));
-		corps.add(new String("Baker's Huts,Blacksmith's Huts,Cobbler's Hut,Forestry Hut,Workman's Hut"));
+		population.add( new String("Year,Total,Percent Male,Mean Utility,Utility Standard Deviation, Homeless,Shack,Homestead,Villa"));
+		corps.add(new String("Year,Baker's Huts,Blacksmith's Huts,Cobbler's Hut,Forestry Hut,Workman's Hut"));
 	}
 	
 	/**
@@ -60,29 +60,30 @@ public class Statistics {
 		prices.add(City.economy.getPriceString());
 		
 		
-		String popString = new String();
+		String popString = new String(City.year + ",");
 		int male = 0;	//must divide by pop
 		int[] homeClass = new int[4];
 		for(Person curr: City.alive){
 			if (curr.male) male++;
-			if(curr.home == null) homeClass[0]++;
-			else homeClass[curr.home.getRank()]++;
+			homeClass[Home.getRank(curr.home)]++;
 		}
 		popString += City.alive.size() + "," + ((double)male / (double)City.alive.size())+","+meanUtil+","+utilStdDev+",";
 		for(int i = 0; i<4;i++){
-			popString += homeClass[i] + ",";
+			popString += homeClass[i] == 0?"":homeClass[i] + ",";	//leave cells with 0 buildings empty.
 		}
-		population.add(popString);
+		population.add(popString.trim());
 		
 		String corpString = new String();
 		int[] corpClass = new int[Factory.samples.size()];
 		for(Corporation aCorp:City.allCorps){
-			corpClass[aCorp.holding.ordinal]++;
+			if (aCorp.holding.ordinal > 0){
+				corpClass[aCorp.holding.ordinal]++;
+			}
 		}
 		for(int i = 0; i<Factory.samples.size();i++){
 			corpString += corpClass[i] + ",";
 		}
-		corps.add(corpString);
+		corps.add(corpString.trim());
 	}
 
 	/**

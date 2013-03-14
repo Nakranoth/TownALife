@@ -37,7 +37,7 @@ public class Person{
 	public boolean alive = true;	//used for cleanup portions of processing.
 	public boolean male;			//gender.
 	
-	public int minimumWage;			//The least we'll work for
+	public double minimumWage;			//The least we'll work for
 	
 	public Preferences preferences;	//all inherited things. Public for printing at end.
 	
@@ -84,7 +84,7 @@ public class Person{
 		preferences.put(Preference.childAlloc,0.1);		//Part spent on all of your children. Rolls to next year's income if childless.
 		
 		//preferences.put(Preference.generosity, 1.0);	//percentage of mean salary they want to offer.
-		preferences.put(Preference.greed, 0.5+rand.nextDouble()/2);		//Maximum percentage income to spend on wage. Caps salary, ignoring generosity.
+		preferences.put(Preference.greed, 0.2+rand.nextDouble()/2);		//Maximum percentage income to spend on wage. Caps salary, ignoring generosity.
 													//Also, 1-greed is percent of building value to sell at.
 		
 		preferences.put(Preference.craftUtil, 1.0);
@@ -159,9 +159,9 @@ public class Person{
 	}
 
 	public void preWorkInit(){
-		minimumWage = (int) (preferences.get(Preference.need) * (economy.prices[Resource.food.ordinal()] + economy.prices[Resource.crafts.ordinal()] + economy.prices[Resource.goods.ordinal()]));
+		minimumWage = (preferences.get(Preference.need) * (economy.prices[Resource.food.ordinal()] + economy.prices[Resource.crafts.ordinal()] + economy.prices[Resource.goods.ordinal()]))/3;//adjusted to be the average price of goods.
 		for(Corporation held:ownerships){	//injects resources into each corp until I run out of resources.
-			Bundle insert = held.operatingCost.goal.minus(held.operatingCost.resources).over(held.getShares(this));
+			Bundle insert = held.operatingCost.goal.minus(held.operatingCost.resources).times(held.getShares(this)/100D);
 			insert = allocations[4].resources.intersect(insert); //Gets what I have to give to this corp.
 			allocations[4].resources.extract(insert);
 			held.operatingCost.resources.insert(insert);
@@ -217,7 +217,7 @@ public class Person{
 		income.insert(allocations[5].refundExcessSupply());
 		
 		for(int i = 0; i < allocSet.length; i++){
-			demandedGoods.insert(allocations[i].demand.times(2-preferences.get(Preference.greed)));	//Makes them demand more than they have.
+			demandedGoods.insert(allocations[i].demand);
 		}
 	}
 	
@@ -229,7 +229,7 @@ public class Person{
 	public void handleAllocations(){
 		//shift resources into allocations. 
 		
-		Bundle curr = allocations[4].goal.intersect(income);//operating costs get taken if they're there.
+		Bundle curr = allocations[4].demand.intersect(income);//operating costs get taken if they're there.
 		allocations[4].resources.insert(curr);
 		income.extract(curr);
 		demandedGoods.extract(curr);
@@ -238,23 +238,23 @@ public class Person{
 		//income.extract(usefulStock);	//keep goods I'm not using right now.
 		double ratios[] = usefulStock.ratios(demandedGoods);	//useful/demanded
 
-		curr = allocations[0].goal.times(ratios);//goods
+		curr = allocations[0].demand.times(ratios);//goods
 		allocations[0].resources.insert(curr);
 		income.extract(curr);
 		
-		curr = allocations[1].goal.times(ratios);//upkeep
+		curr = allocations[1].demand.times(ratios);//upkeep
 		allocations[1].resources.insert(curr);
 		income.extract(curr);
 		
-		curr = allocations[2].goal.times(ratios);//home
+		curr = allocations[2].demand.times(ratios);//home
 		allocations[2].resources.insert(curr);
 		income.extract(curr);
 		
-		curr = allocations[3].goal.times(ratios);//support
+		curr = allocations[3].demand.times(ratios);//support
 		allocations[3].resources.insert(curr);
 		income.extract(curr);
 		
-		curr = allocations[5].goal.times(ratios);//income
+		curr = allocations[5].demand.times(ratios);//income
 		allocations[5].resources.insert(curr);
 		income.extract(curr);
 
@@ -335,7 +335,7 @@ public class Person{
 		boolean bought = false;
 		for(Listing listing:City.listings){
 			if (listing.price > budget) break;	//cannot afford.
-			if(listing.property.getRank() >= ((Home) newHomeBudget.building).getRank()){
+			if(Home.getRank(listing.property) >= (Home.getRank((Home) newHomeBudget.building))){
 				listing.buy(newHomeBudget.resources.worthAtLeast(listing.price), this);
 				bought = true;
 				break;
@@ -457,12 +457,12 @@ public class Person{
 	{
 		skills[type.ordinal()] += 1;
 		
-		return Math.sqrt(Math.max(1, skills[type.ordinal()] - (effectiveAge < 40?0:(40 - effectiveAge)/2)));	//effective skill slowly deteriorates after 40.
+		return Math.max(1D, Math.sqrt(skills[type.ordinal()]+16 - (effectiveAge < 40?0:(40 - effectiveAge)/2))-3);	//effective skill slowly deteriorates after 40.
 	}
 	
 	public double getSkill(SkillType type)
 	{
-		return Math.sqrt(Math.max(1, skills[type.ordinal()] - (effectiveAge < 40?0:(40 - effectiveAge)/2)));	//effective skill slowly deteriorates after 40.
+		return Math.max(1D, Math.sqrt(skills[type.ordinal()]+16 - (effectiveAge < 40?0:(40 - effectiveAge)/2)))-3;	//effective skill slowly deteriorates after 40.
 	}
 	
 	/**
@@ -482,7 +482,7 @@ public class Person{
 		
 		Bundle wanted = new Bundle();
 		for(Corporation curr:ownerships){
-			wanted.insert(curr.operatingCost.goal.minus(curr.operatingCost.resources).over(curr.getShares(this)));
+			wanted.insert(curr.operatingCost.goal.minus(curr.operatingCost.resources).times(curr.getShares(this)/100D));
 		}
 		
 		return wanted;
@@ -529,19 +529,19 @@ public class Person{
 	 * Updates what this person wants to be building or buying as their next home. 
 	 */
 	private void updateHomePlan() {
-		if((family.father != null && home == family.father.home) || (family.mother != null && home == family.mother.home)){	//we live at home and need to save up to make our own.
+		if(livesAtHome()){
 			if (realestate.size() == 0) allocations[2].setBuildingClass(new Shack());
 			else{
 				int rank = 0;
 				for (Home house:realestate){
-					if (house != null && house.getRank() > rank) rank = house.getRank();
+					if (Home.getRank(house) > rank) rank = Home.getRank(house);
 				}
 				allocations[2].setBuildingClass(Home.getRankedHome(rank+1));
 			}
 		}
 		else{
 			if (home == null) allocations[2].setBuildingClass(new Shack());
-			else allocations[2].setBuildingClass(Home.getRankedHome(home.getRank()+1));
+			else allocations[2].setBuildingClass(Home.getRankedHome(Home.getRank(home)+1));
 		}
 	}
 	
@@ -569,7 +569,7 @@ public class Person{
 	 * Moves self, wife, and children living at home to better home, if available.
 	 */
 	public void move() {
-		int homeRank = (home == null?0:((realAge > 12 && livesAtHome())?0:home.getRank()));	//should encourage moving out of their parent's house.
+		int homeRank = ((realAge > 12 && livesAtHome())?0:Home.getRank(home));	//encourages moving out of parent's house.
 		Home newHome = home; 
 		Iterator<Home> i = realestate.iterator();
 		while(i.hasNext()){
@@ -578,7 +578,7 @@ public class Person{
 				i.remove();
 				continue;
 			}
-			int estateRank = estate.getRank(); 
+			int estateRank = Home.getRank(estate); 
 			if (estateRank > homeRank || (estateRank == homeRank && estate.currentImprovement > (home == null? 0 :home.currentImprovement))){
 				newHome = estate;
 				homeRank = estateRank;
@@ -648,7 +648,7 @@ public class Person{
 	public void wed(Person homeowner) {
 		homeowner.setSpouse(this);
 		setSpouse(homeowner);
-		home.occupants.remove(this);	//leave old home
+		if(home != null)home.occupants.remove(this);	//leave old home
 		if(!livesAtHome() && home != null){
 			realestate.add(home);
 		}

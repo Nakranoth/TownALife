@@ -7,18 +7,18 @@ import city.ResourcePile;
 import city.ResourcePile.Resource;
 import city.Task;
 
-public class CobblersHut extends Factory {
+public class Mine extends Factory {
 
 	static Bundle costs = new Bundle(new ResourcePile(Resource.wood,250)); 
 	
-	public CobblersHut(int ordinal)
+	public Mine(int ordinal)
 	{
 		super(costs, 5,ordinal);
-		name = "Cobbler's Hut";
-		tasks.add(new Task(Resource.stone, 3, 50,SkillType.quarryer));	//2x efficiency from homestead. Still slow.
+		name = "Mine";
+		tasks.add(new Task(Resource.metal, 5, 20,SkillType.miner));	//2x efficiency from homestead. Still slow.
 	}
 
-	public CobblersHut(CobblersHut clone){
+	public Mine(Mine clone){
 		super(costs, 5,clone.ordinal, clone.tasks);
 		name = clone.name;
 	}
@@ -27,7 +27,7 @@ public class CobblersHut extends Factory {
 	@Override
 	public <E extends Factory> E shallowClone() {
 		// TODO Auto-generated method stub
-		return (E) new CobblersHut(this);
+		return (E) new Mine(this);
 	}
 	
 }

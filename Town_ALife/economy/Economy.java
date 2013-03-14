@@ -13,34 +13,41 @@ import city.ResourcePile.Resource;
  * @author Nathan Killeen
  */
 public class Economy {
-	public Double[] prices = new Double[Resource.values().length];
+	public Double[] prices = {1.0,0.26,0.21,0.27,0.19,1.0,1.0,0.19};//new Double[Resource.values().length];
 	//public double[] wage = null;	//represents the percent of output value to be paid out. Real pay is rounded down. Is adjusted per type.
 	//public int[] wageRaiseHelper = null;	//number of this type that wanted to operate, but found no workers.
 	//public int[] wageReduceHelper = null;	//number of this type that refused to operate because of negative profits.
+	//private LinkedList<Double[]> ratioQueue = null;//
+	private Double[] smoothedRatios = {1.0,0.26,0.21,0.27,0.19,1.0,1.0,0.19};//new Double[Resource.values().length];
 	Bundle demand, supply = new Bundle();
 	
 	public Economy(){
-		for (Resource init:Resource.values()){
+		/*for (Resource init:Resource.values()){
 			prices[init.ordinal()] = 1.0;	//All same price to start. Should quickly adjust to market.
-		}
+		}*/
 	}
 	
 	/**
 	 * Updates prices for next year. Run after trading.
 	 */
 	public void updatePrices(){
-		double[] ratios = new double[Resource.values().length];
+		Double[] ratios = new Double[Resource.values().length];
 		for(Resource type:Resource.values()){
 			double top = Math.max((double)demand.getType(type).amount,0.01D);
 			double bottom = Math.max((double)supply.getType(type).amount,0.01D);
 			ratios[type.ordinal()] = Math.min(1000D, Math.max(0.0001, top / bottom));
 		}
-		for(int i = 0; i < Resource.values().length; i++){
-			prices[i] = ratios[i] / ratios[Resource.goods.ordinal()];	//People always want some goods.
-			//System.out.print(Resource.values()[i].name() + ":" + prices[i] + ", ");
+
+		for (int i = 0; i < Resource.values().length;i++){
+			smoothedRatios[i] += (ratios[i] - smoothedRatios[i]) / 2;	//Smoothing
 		}
-		//System.out.print(type.name() + ":" + prices[type.ordinal()] + ", ");
-		//System.out.println();
+
+		
+		for(int i = 0; i < Resource.values().length; i++){
+			prices[i] = smoothedRatios[i] / smoothedRatios[Resource.goods.ordinal()];	//People always want some goods.
+			System.out.print(Resource.values()[i].name() + ":" + prices[i] + ", ");
+		}
+		System.out.println();
 	}
 
 	/**
@@ -83,7 +90,7 @@ public class Economy {
 	}
 
 	public String getSupplyString() {
-		String supplyString = new String();
+		String supplyString = new String(City.year + ",");
 		
 		Long supplies[] = new Long[Resource.values().length];
 		
@@ -97,7 +104,7 @@ public class Economy {
 	}
 	
 	public String getDemandString() {
-		String demandString = new String();
+		String demandString = new String(City.year + ",");
 		
 		Long demands[] = new Long[Resource.values().length];
 		
@@ -111,10 +118,10 @@ public class Economy {
 	}
 	
 	public String getPriceString() {
-		String priceString = new String();
+		String priceString = new String(City.year + ",");
 		
 		for (int i = 0; i < Resource.values().length; i++){
-			priceString += prices[i].toString();
+			priceString += prices[i].toString() +",";
 		}
 		return priceString;
 	}

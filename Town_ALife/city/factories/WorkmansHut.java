@@ -24,7 +24,7 @@ public class WorkmansHut extends Factory {
 		
 		tasks.add(new Task(Resource.stone, 2, 20,SkillType.quarryer));
 		
-		tasks.add(new Task(Resource.metal, 1, 5,SkillType.miner));		//1 yr = 5 metal
+		tasks.add(new Task(Resource.metal, 2, 10,SkillType.miner));		//1 yr = 5 metal
 		
 		tasks.add(new Task(Resource.crops, 3, 30,SkillType.farmer));		//1 unskilled person can grow 30 units.
 	}

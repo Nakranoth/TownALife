@@ -21,6 +21,7 @@ import city.factories.BakersHut;
 import city.factories.BlacksmithsHut;
 import city.factories.CobblersHut;
 import city.factories.ForestryHut;
+import city.factories.Mine;
 import city.factories.WorkmansHut;
 import city.homes.Shack;
 import economy.Economy;
@@ -111,9 +112,7 @@ public class City {
 			//	add to salaryHelper, skillHelper and workForce.
 			Collections.sort(canPay,new CorpWageComp());
 			for(Corporation toHire:canPay){
-				if(toHire.hire(workForce) != 0){
-					toHire.doWork();
-				}
+				if (toHire.hire(workForce) > 0) toHire.doWork();
 			}
 
 			//Update corp stats for next year 
@@ -198,7 +197,7 @@ public class City {
 			Statistics.addThisYear(meanUtility, utilDeviation);
 			year++;
 		}
-		if(year >= 100 && alive.size() > 10){
+		if(year >= 100 ){//&& alive.size() > 25){
 			
 			System.out.println("Exit: "+alive.size());
 			try {
@@ -216,43 +215,52 @@ public class City {
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-			if (alive.size()>50)Statistics.save();
+			if (alive.size()>1)Statistics.save();//TODO find good value to save
 		}
+	}
+
+	private void init() {
+		//clear out any old data.
 		alive.clear();
 		allCorps.clear();
 		places.clear();
 		listings.clear();
 		year = 0;
+		Factory.samples.clear();
 		Preferences.clearLoads();
-	}
-
-	private void init() {
-		// TODO Initialize starting population and structures.
+		
 		Factory.samples.add(new WorkmansHut(0));	//All factories of this type clone this sample.
 		Factory.samples.add(new ForestryHut(1));
 		Factory.samples.add(new CobblersHut(2));
 		Factory.samples.add(new BlacksmithsHut(3));
 		Factory.samples.add(new BakersHut(4));
+		Factory.samples.add(new Mine(5));
 		
 		File loadFrom = new File("clean");
 		
 		buildingsOfType = new int[Factory.samples.size()];
 		
 
-		ResourcePile[] startingGoods = {new ResourcePile(Resource.crafts,10),
-										new ResourcePile(Resource.crops,10),
-										new ResourcePile(Resource.food,10),
-										new ResourcePile(Resource.goods,10),
-										new ResourcePile(Resource.metal,10),
-										new ResourcePile(Resource.tools,10)};
-		
+
 		for(int i = 0; i < Factory.samples.size();i++){
-			Person a = Person.loadPerson(loadFrom);
+			ResourcePile[] startingGoods = {
+					new ResourcePile(Resource.crafts,10),
+					new ResourcePile(Resource.crops,10),
+					new ResourcePile(Resource.food,10),
+					new ResourcePile(Resource.goods,10),
+					new ResourcePile(Resource.metal,10),
+					new ResourcePile(Resource.tools,10),
+					new ResourcePile(Resource.wood,10),
+					new ResourcePile(Resource.stone,10)
+			};
+			
+			Person a = new Person(i%2==0);//Person.loadPerson(loadFrom);
 			a.realAge = 16;
 			a.effectiveAge = 16;
 			Corporation aCorp = new Corporation(Factory.samples.get(i).shallowClone(), a);
 			a.addCorp(aCorp);
 			allCorps.add(aCorp);
+			places.add(aCorp.holding);
 			Home shack = new Shack();
 			places.add(shack);
 			a.newRealestate(shack);
@@ -261,7 +269,17 @@ public class City {
 		}
 		
 		for(int i = 0; i < 9; i++){	//now with and extra 9 ppl, but with no corps.
-			Person a = Person.loadPerson(loadFrom);
+			ResourcePile[] startingGoods = {
+					new ResourcePile(Resource.crafts,10),
+					new ResourcePile(Resource.crops,10),
+					new ResourcePile(Resource.food,10),
+					new ResourcePile(Resource.goods,10),
+					new ResourcePile(Resource.metal,10),
+					new ResourcePile(Resource.tools,10),
+					new ResourcePile(Resource.wood,10),
+					new ResourcePile(Resource.stone,10)
+			};
+			Person a = new Person(i%2==0);//Person.loadPerson(loadFrom);
 			a.realAge = 16;
 			a.effectiveAge = 16;
 			Home shack = new Shack();

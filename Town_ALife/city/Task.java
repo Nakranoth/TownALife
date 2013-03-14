@@ -57,8 +57,8 @@ public class Task {
 	 */
 	public ResourcePile doWork(LinkedList<Person> workers, ResourcePile availResources){
 		lastUpdated++;	//updated for next year. Keeps real values, rather than guessing estimates.
-		int skillPool = 0;
-		int maxSkill = 0;	//Used to detect throttling
+		double skillPool = 0;
+		double maxSkill = 0;	//Used to detect throttling
 		for(Person worker:workers){
 			skillPool += worker.doWork(skill);
 		}
@@ -111,19 +111,19 @@ public class Task {
 		return maxWorkers;
 	}
 	
-	public long getThrottle(long availResources){	//returns the maximum amount of effective skill given an available resource pool.
+	public long getThrottle(long availResources){	//returns the maximum amount of effective OUTPUT given an available resource pool.
 		if (matEfficency == 0) return Long.MAX_VALUE;
-		return (long) ((long) (availResources * matEfficency) / efficency);
+		return (long)(availResources * matEfficency);
 	}
 	
-	private int getReturns(int skill){
-		int returns = (int) (skill * efficency);
+	private int getReturns(double skillPool){
+		int returns = (int) (skillPool * efficency);
 		return returns;
 	}
 	
 	private int getCosts(long returns){
 		if (matEfficency <= 0) return 0;
-		return (int) (returns * matEfficency); //matEfficency is less than or equal to 1.
+		return (int) (returns / matEfficency); //matEfficency is less than or equal to 1.
 	}
 
 	public SkillType getSkill() {

@@ -23,4 +23,8 @@ public class ResourcePile implements Comparable<ResourcePile>{
 	public double getValue() {
 		return amount * City.economy.prices[type.ordinal()];
 	}
+	
+	public String toString(){
+		return type.name() + "," + amount;
+	}
 }
