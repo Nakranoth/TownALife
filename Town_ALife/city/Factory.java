@@ -79,7 +79,7 @@ public abstract class Factory extends Building {
 	public boolean decay(){
 		disuse++;
 		if (disuse == 0) return false; //typical case.
-		if (rand.nextInt(10) <= disuse){
+		if (rand.nextInt(20) <= disuse){
 			ordinal = -1;	//lets the corp know it died. Will refund operating costs next year.
 			return true;
 		}

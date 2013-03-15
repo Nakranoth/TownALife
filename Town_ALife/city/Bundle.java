@@ -109,7 +109,7 @@ public class Bundle implements Iterable<ResourcePile>{
 	public Bundle over(double divisor) {
 		Bundle result = new Bundle();
 		for(ResourcePile pile:contents){
-			result.insert(new ResourcePile(pile.type, (int)(pile.amount / divisor)));
+			result.insert(new ResourcePile(pile.type, pile.amount / divisor));
 		}
 		return result;
 	}
@@ -167,7 +167,7 @@ public class Bundle implements Iterable<ResourcePile>{
 			for(ResourcePile used:goal){
 				if (copy.type == used.type){
 					copy.amount -= used.amount;
-					if (copy.amount < 0) copy.amount = 0L;
+					if (copy.amount < 0) copy.amount = 0D;
 					break;
 				}
 			}
@@ -245,7 +245,7 @@ public class Bundle implements Iterable<ResourcePile>{
 	public Bundle times(Double scale) {
 		Bundle result = new Bundle();
 		for (ResourcePile pile:contents){
-			ResourcePile insert = new ResourcePile(pile.type,(int) (pile.amount * scale));
+			ResourcePile insert = new ResourcePile(pile.type,pile.amount * scale);
 			if(insert.amount > 0){
 				result.insert(insert);
 			}
@@ -280,7 +280,7 @@ public class Bundle implements Iterable<ResourcePile>{
 				divvy.insert(nth);
 			}
 			else{
-				divvy.insert(new ResourcePile(nth.type,(int) (nth.amount*(City.economy.prices[nth.type.ordinal()]/(maximumPrice-divvy.getValue())))));
+				divvy.insert(new ResourcePile(nth.type,nth.amount*(City.economy.prices[nth.type.ordinal()]/(maximumPrice-divvy.getValue()))));
 			}
 			n++;
 		}
@@ -304,9 +304,9 @@ public class Bundle implements Iterable<ResourcePile>{
 		for(int i = 0; i < Resource.values().length; i++)	ratios[i] = 0.0;
 	
 		for(ResourcePile pile:this){
-			long denAmount = denominator.getResource(pile.type).amount;
+			double denAmount = denominator.getResource(pile.type).amount;
 			if(denAmount != 0){
-				ratios[pile.type.ordinal()] = (double)pile.amount / (double)denAmount;
+				ratios[pile.type.ordinal()] = pile.amount / denAmount;
 			}
 			else{
 				ratios[pile.type.ordinal()] = Double.POSITIVE_INFINITY;
@@ -321,7 +321,7 @@ public class Bundle implements Iterable<ResourcePile>{
 	public Bundle times(double[] ratios) {
 		Bundle times = new Bundle();
 		for(ResourcePile pile:this){
-			times.insert(new ResourcePile(pile.type,(int) (pile.amount*ratios[pile.type.ordinal()])));
+			times.insert(new ResourcePile(pile.type,pile.amount*ratios[pile.type.ordinal()]));
 		}
 		return times;
 	}

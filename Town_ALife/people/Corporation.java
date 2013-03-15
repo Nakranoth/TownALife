@@ -46,7 +46,7 @@ public class Corporation{
 		wage = 0D;
 		
 		double currProfit = holding.getProfitability(operatingCost.resources);
-		annualProfitability += (currProfit - annualProfitability)/5;
+		annualProfitability += (currProfit - annualProfitability);///5; already smoothed via prices.
 		updateCheapest();
 		
 		for(CorpMember owner:members){
@@ -116,7 +116,7 @@ public class Corporation{
 		cheapestStock = Double.POSITIVE_INFINITY;
 		for(CorpMember seller:members){
 			if (seller.person.alive){
-				long sellerPrice = (long) (seller.person.preferences.get(Preference.timeScale) * annualProfitability / 100);
+				double sellerPrice = seller.person.preferences.get(Preference.timeScale) * annualProfitability / 100;
 				if (sellerPrice < cheapestStock){
 					cheapestSeller = seller;
 					cheapestStock = sellerPrice;
@@ -134,13 +134,14 @@ public class Corporation{
 	public void buyShares(Person buyer, Bundle available){
 		double worth = buyer.preferences.get(Preference.timeScale) * annualProfitability / 100;
 		while (available.getValue() > cheapestStock && cheapestSeller.person != buyer && cheapestStock < worth){
-			int shares = Math.min(cheapestSeller.ownership, (int)(available.getValue() / cheapestStock));
+			int shares = (int) Math.min(cheapestSeller.ownership, available.getValue() / cheapestStock);
 			double maximumPrice = cheapestStock * shares;
 			try {
 				transferOfOwnership(cheapestSeller.person, buyer, shares);
 				Bundle barter = available.worthAtLeast(maximumPrice);
 				cheapestSeller.person.income.insert(barter);//Give barter to seller.
 			} catch (BadSellerException e) {
+				System.err.println("Corp: sale");
 				e.printStackTrace();
 			}
 			updateCheapest();
@@ -156,11 +157,16 @@ public class Corporation{
 			if (member.person == seller) corpSeller = member;
 			if (member.person == buyer) corpBuyer = member;
 		}
-		if (corpSeller == null || corpSeller.ownership < shares) throw new BadSellerException(buyer, seller, this);
+		if (corpSeller == null || corpSeller.ownership < shares) 
+			throw new BadSellerException(buyer, seller, this);
 		if (corpBuyer == null)
 		{
 			corpBuyer = new CorpMember(buyer, shares);
 			members.add(corpBuyer);
+			corpSeller.ownership -= shares;
+		}
+		else{
+			corpBuyer.ownership += shares;
 			corpSeller.ownership -= shares;
 		}
 		if(corpSeller.ownership <= 0) {
@@ -242,5 +248,9 @@ public class Corporation{
 			return true;
 		}
 		return false;
+	}
+	
+	public String toString(){
+		return holding.toString()+annualProfitability;
 	}
 }

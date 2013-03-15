@@ -7,8 +7,8 @@ package city;
 public class ResourcePile implements Comparable<ResourcePile>{
 	public static enum Resource{wood,stone,crops,metal,tools,crafts,goods,food};
 	public Resource type;
-	public Long amount;
-	public ResourcePile(Resource type, long amount){
+	public Double amount;
+	public ResourcePile(Resource type, double amount){
 		this.type = type;
 		this.amount = amount;
 	}

@@ -6,11 +6,11 @@ import city.City;
 import city.Home;
 
 public class Listing implements Comparable<Listing>{
-	public Integer price;
+	public Double price;
 	public Home property;
 	public Person owner;
 	
-	public Listing(int price, Home property, Person owner){
+	public Listing(double price, Home property, Person owner){
 		this.price = price;
 		this.owner = owner;
 		this.property = property;

@@ -197,7 +197,7 @@ public class City {
 			Statistics.addThisYear(meanUtility, utilDeviation);
 			year++;
 		}
-		if(year >= 100 ){//&& alive.size() > 25){
+		if(year >= 100 && alive.size() > 75){
 			
 			System.out.println("Exit: "+alive.size());
 			try {
@@ -213,9 +213,10 @@ public class City {
 				}
 				bWriter.close();
 			} catch (IOException e) {
+				System.err.println("City: Buffered Writer");
 				e.printStackTrace();
 			}
-			if (alive.size()>1)Statistics.save();//TODO find good value to save
+			if (alive.size()>150)Statistics.save();//TODO find good value to save
 		}
 	}
 
@@ -254,7 +255,7 @@ public class City {
 					new ResourcePile(Resource.stone,10)
 			};
 			
-			Person a = new Person(i%2==0);//Person.loadPerson(loadFrom);
+			Person a = Person.loadPerson(loadFrom);
 			a.realAge = 16;
 			a.effectiveAge = 16;
 			Corporation aCorp = new Corporation(Factory.samples.get(i).shallowClone(), a);
@@ -279,7 +280,7 @@ public class City {
 					new ResourcePile(Resource.wood,10),
 					new ResourcePile(Resource.stone,10)
 			};
-			Person a = new Person(i%2==0);//Person.loadPerson(loadFrom);
+			Person a = Person.loadPerson(loadFrom);
 			a.realAge = 16;
 			a.effectiveAge = 16;
 			Home shack = new Shack();
@@ -334,6 +335,7 @@ public class City {
 				}
 			}
 			catch(Exception e){
+				System.err.println("Main");
 				e.printStackTrace();
 			}
 			System.out.println("Done");

@@ -69,7 +69,7 @@ public class Allocation {
 		Resource cheapest = goal.getLeastExpensiveType();
 		double cheapPrice = economy.prices[cheapest.ordinal()];
 		if (demandValue < value + cheapPrice){
-			demand.insert(new ResourcePile(cheapest, (int) ((value-demandValue)/cheapPrice)));	//add in some of the cheapest good to recover excess value.
+			demand.insert(new ResourcePile(cheapest, (value-demandValue)/cheapPrice));	//add in some of the cheapest good to recover excess value.
 		}
 		
 		return demand;
@@ -87,7 +87,7 @@ public class Allocation {
 	 * @param years The duration in which profit should be maximal.
 	 * @param genValue How much resources can be spent annually towards these plans.
 	 */
-	public void planBuilding(int years, long genValue){
+	public void planBuilding(int years, double genValue){
 		Building planned = null;
 		double profit = 0;
 		

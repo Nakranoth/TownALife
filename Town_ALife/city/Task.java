@@ -12,8 +12,8 @@ public class Task {
 	private double efficency, matEfficency;
 	private SkillType skill;
 	
-	private int inputQuantity = 0;
-	private long outputQuantity;
+	private double inputQuantity = 0;
+	private double outputQuantity;
 	
 	public int lastUpdated = 0;
 	
@@ -64,7 +64,7 @@ public class Task {
 		}
 		if(input != null){
 			maxSkill = skillPool;
-			skillPool = (int) Math.min(getThrottle(availResources.amount), skillPool);	//throttle if necessary. Cannot be larger than int skillpool.
+			skillPool = Math.min(getThrottle(availResources.amount), skillPool);	//throttle if necessary. Cannot be larger than int skillpool.
 		}
 		
 		outputQuantity = getReturns(skillPool);
@@ -74,7 +74,7 @@ public class Task {
 			availResources.amount -= inputQuantity;
 		}
 		
-		long localOutput = outputQuantity;
+		double localOutput = outputQuantity;
 		
 		if(maxSkill > skillPool){//causes future math to consider cost and gains as if enough resources had been present.
 			outputQuantity = getReturns(maxSkill);
@@ -91,7 +91,7 @@ public class Task {
 	 */
 	public void reGuess(Bundle resources){
 		if(City.year > lastUpdated){
-			long throttled = getThrottle(resources.getType(input).amount);
+			double throttled = getThrottle(resources.getType(input).amount);
 			outputQuantity = Math.min(throttled, getReturns(maxWorkers * Math.max(1,City.avgSkill[skill.ordinal()])));
 			inputQuantity = getCosts(outputQuantity);
 			lastUpdated = City.year;
@@ -111,19 +111,18 @@ public class Task {
 		return maxWorkers;
 	}
 	
-	public long getThrottle(long availResources){	//returns the maximum amount of effective OUTPUT given an available resource pool.
-		if (matEfficency == 0) return Long.MAX_VALUE;
-		return (long)(availResources * matEfficency);
+	public double getThrottle(double availResources){	//returns the maximum amount of effective OUTPUT given an available resource pool.
+		if (matEfficency == 0) return Double.POSITIVE_INFINITY;
+		return availResources * matEfficency;
 	}
 	
-	private int getReturns(double skillPool){
-		int returns = (int) (skillPool * efficency);
-		return returns;
+	private double getReturns(double skillPool){
+		return (skillPool * efficency);
 	}
 	
-	private int getCosts(long returns){
+	private double getCosts(double returns){
 		if (matEfficency <= 0) return 0;
-		return (int) (returns / matEfficency); //matEfficency is less than or equal to 1.
+		return returns / matEfficency; //matEfficency is less than or equal to 1.
 	}
 
 	public SkillType getSkill() {

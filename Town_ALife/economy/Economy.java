@@ -13,12 +13,12 @@ import city.ResourcePile.Resource;
  * @author Nathan Killeen
  */
 public class Economy {
-	public Double[] prices = {1.0,0.26,0.21,0.27,0.19,1.0,1.0,0.19};//new Double[Resource.values().length];
+	public Double[] prices = {1.2,0.28,0.8,1.1,0.19,1.0,1.0,0.19};//new Double[Resource.values().length];
 	//public double[] wage = null;	//represents the percent of output value to be paid out. Real pay is rounded down. Is adjusted per type.
 	//public int[] wageRaiseHelper = null;	//number of this type that wanted to operate, but found no workers.
 	//public int[] wageReduceHelper = null;	//number of this type that refused to operate because of negative profits.
 	//private LinkedList<Double[]> ratioQueue = null;//
-	private Double[] smoothedRatios = {1.0,0.26,0.21,0.27,0.19,1.0,1.0,0.19};//new Double[Resource.values().length];
+	private Double[] smoothedRatios = {1.2,0.28,0.8,1.1,0.19,1.0,1.0,0.19};//new Double[Resource.values().length];
 	Bundle demand, supply = new Bundle();
 	
 	public Economy(){
@@ -39,15 +39,15 @@ public class Economy {
 		}
 
 		for (int i = 0; i < Resource.values().length;i++){
-			smoothedRatios[i] += (ratios[i] - smoothedRatios[i]) / 2;	//Smoothing
+			smoothedRatios[i] += (ratios[i] - smoothedRatios[i]) / 5;	//Smoothing
 		}
 
 		
 		for(int i = 0; i < Resource.values().length; i++){
 			prices[i] = smoothedRatios[i] / smoothedRatios[Resource.goods.ordinal()];	//People always want some goods.
-			System.out.print(Resource.values()[i].name() + ":" + prices[i] + ", ");
+			//System.out.print(Resource.values()[i].name() + ":" + prices[i] + ", ");
 		}
-		System.out.println();
+		//System.out.println();
 	}
 
 	/**
@@ -78,10 +78,10 @@ public class Economy {
 			Bundle sold = new Bundle();
 			Bundle metDemand = new Bundle();
 			for(ResourcePile pile:reciever.income){
-				sold.insert(new ResourcePile(pile.type,(int) (pile.amount * leftover[pile.type.ordinal()])));
+				sold.insert(new ResourcePile(pile.type,pile.amount * leftover[pile.type.ordinal()]));
 			}
 			for(ResourcePile pile:reciever.demandedGoods){
-				metDemand.insert(new ResourcePile(pile.type,(int) (pile.amount * bought[pile.type.ordinal()])));
+				metDemand.insert(new ResourcePile(pile.type,pile.amount * bought[pile.type.ordinal()]));
 			}
 			reciever.income = reciever.income.minus(sold);	//leftovers from sales
 			reciever.income.insert(metDemand);	//new things bought.
@@ -92,7 +92,7 @@ public class Economy {
 	public String getSupplyString() {
 		String supplyString = new String(City.year + ",");
 		
-		Long supplies[] = new Long[Resource.values().length];
+		Double supplies[] = new Double[Resource.values().length];
 		
 		for(ResourcePile pile:supply){
 			supplies[pile.type.ordinal()] = pile.amount;
@@ -106,7 +106,7 @@ public class Economy {
 	public String getDemandString() {
 		String demandString = new String(City.year + ",");
 		
-		Long demands[] = new Long[Resource.values().length];
+		Double demands[] = new Double[Resource.values().length];
 		
 		for(ResourcePile pile:demand){
 			demands[pile.type.ordinal()] = pile.amount;

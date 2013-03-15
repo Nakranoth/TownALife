@@ -103,6 +103,7 @@ public class Statistics {
 			writer.flush();
 			writer.close();
 		} catch (Exception e) {
+			System.err.println("Stats: Save 1");
 			e.printStackTrace();
 		}
 		try {
@@ -117,6 +118,7 @@ public class Statistics {
 			writer.flush();
 			writer.close();
 		} catch (Exception e) {
+			System.err.println("Stats: Save 2");
 			e.printStackTrace();
 		}
 		
@@ -132,6 +134,7 @@ public class Statistics {
 			writer.flush();
 			writer.close();
 		} catch (Exception e) {
+			System.err.println("Stats: Save 3");
 			e.printStackTrace();
 		}
 		
@@ -147,6 +150,7 @@ public class Statistics {
 			writer.flush();
 			writer.close();
 		} catch (Exception e) {
+			System.err.println("Stats: Save 4");
 			e.printStackTrace();
 		}
 		
@@ -162,6 +166,7 @@ public class Statistics {
 			writer.flush();
 			writer.close();
 		} catch (Exception e) {
+			System.err.println("Stats: Save 5");
 			e.printStackTrace();
 		}
 	}

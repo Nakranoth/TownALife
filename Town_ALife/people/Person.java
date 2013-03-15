@@ -192,7 +192,7 @@ public class Person{
 			}
 		}
 		
-		long upkeepDemandValue = (long) (incomeValue * preferences.get(Preference.upkeepAlloc));
+		double upkeepDemandValue = incomeValue * preferences.get(Preference.upkeepAlloc);
 		allocations[1].demand = allocations[1].getDemand(upkeepDemandValue);
 		//the difference between upkeepDemandValue and allocations[1].demand.getValue() gets added to allocations[2] (savings)
 		Bundle upkeepRefund = allocations[1].refundExcessSupply();
@@ -201,19 +201,19 @@ public class Person{
 		//Update planned home.
 		updateHomePlan();
 		
-		int homeSavings = (int) (incomeValue * preferences.get(Preference.newHomeAlloc) + upkeepRefund.getValue());
+		double homeSavings = incomeValue * preferences.get(Preference.newHomeAlloc) + upkeepRefund.getValue();
 		allocations[2].refreshGoal();
 		allocations[2].demand = allocations[2].getDemand(homeSavings);
 		income.insert(allocations[2].refundExcessSupply());	//The value is still in the demand.
 		
 		allocations[3].goal = computeChildSupport();
-		allocations[3].demand = allocations[3].getDemand((int) (incomeValue * preferences.get(Preference.childAlloc)));
+		allocations[3].demand = allocations[3].getDemand(incomeValue * preferences.get(Preference.childAlloc));
 		income.insert(allocations[3].refundExcessSupply());
 		
-		if(realAge % preferences.get(Preference.stubbornness) == 0){
-			allocations[5].planBuilding(preferences.get(Preference.timeScale).intValue(),(long) (incomeValue * preferences.get(Preference.incomeAlloc)));
+		if(realAge % preferences.get(Preference.stubbornness).intValue() == 0){
+			allocations[5].planBuilding(preferences.get(Preference.timeScale).intValue(),(incomeValue * preferences.get(Preference.incomeAlloc)));
 		}
-		allocations[5].demand = allocations[5].getDemand((int) (incomeValue * preferences.get(Preference.incomeAlloc)));
+		allocations[5].demand = allocations[5].getDemand(incomeValue * preferences.get(Preference.incomeAlloc));
 		income.insert(allocations[5].refundExcessSupply());
 		
 		for(int i = 0; i < allocSet.length; i++){
@@ -281,9 +281,10 @@ public class Person{
 		double buildingRatio = (double) (newIncomeBudget.building==null?Double.MAX_VALUE:newIncomeBudget.building.getCost().getValue()) / (double)newIncomeBudget.adjustedProfitability;
 		boolean madePurchase = false;
 		for (Corporation seller:City.allCorps){
+			double worth = preferences.get(Preference.timeScale) * seller.annualProfitability / 100;
 			double budgetValue = newIncomeBudget.resources.getValue();
 			if(seller.profitRatio > buildingRatio) break;	//once the stock is too expensive, we stop.
-			while (seller.profitRatio < buildingRatio && budgetValue > seller.cheapestStock && seller.cheapestStock > 0){	//the stock is more valuable than the building
+			while (worth > seller.cheapestStock && seller.profitRatio < buildingRatio && budgetValue > seller.cheapestStock && seller.cheapestSeller.person != this){	//the stock is more valuable than the building
 				madePurchase = true;
 				seller.buyShares(this, newIncomeBudget.resources);
 				budgetValue = newIncomeBudget.resources.getValue();
@@ -388,11 +389,14 @@ public class Person{
 		if (family.spouse != null && family.spouse.alive){
 			family.spouse.income.insert(income);
 			for(Corporation curr:ownerships){
-				try{
-					curr.partialTransferOfOwnership(this, family.spouse, curr.getShares(this));
-				}
-				catch(BadSellerException e){
-					System.err.println(e.getMessage());
+				if (curr.getShares(this) > 0){
+					try{
+						curr.partialTransferOfOwnership(this, family.spouse, curr.getShares(this));
+					}
+					catch(BadSellerException e){
+						System.err.println("Person: die1");
+						e.printStackTrace();
+					}
 				}
 			}
 			family.spouse.realestate.addAll(realestate);
@@ -410,11 +414,14 @@ public class Person{
 				if (curr.alive){
 					curr.income.insert(income);
 					for(Corporation i:ownerships){
-						try{
-							i.partialTransferOfOwnership(this, curr, i.getShares(this)/numChildren);
-						}
-						catch(BadSellerException e){
-							System.err.println(e.getMessage());
+						if (i.getShares(this) > 0){
+							try{
+								i.partialTransferOfOwnership(this, curr, i.getShares(this)/numChildren);
+							}
+							catch(BadSellerException e){
+								System.err.println("Person: die2");
+								e.printStackTrace();
+							}
 						}
 					}
 				}
@@ -503,15 +510,15 @@ public class Person{
 		double goodPrice = economy.prices[Resource.goods.ordinal()];
 		double foodUtil = preferences.get(Preference.foodUtil);
 		double foodPrice = economy.prices[Resource.food.ordinal()];
-		ratios[0] = (craftUtil*craftPrice) / (goodUtil*goodPrice);// crafts/goods
-		ratios[1] = (goodUtil * goodPrice) / (foodUtil*foodPrice);// goods/food
-		ratios[2] = ratios[0]/ratios[1]; // crafts/food
+		ratios[0] = (craftUtil*goodPrice) / (goodUtil*craftPrice);// crafts/goods
+		ratios[1] = (goodUtil*foodPrice) / (foodUtil*goodPrice);// goods/food
+		ratios[2] = ratios[1]/ratios[0]; // crafts/food
 		
 		//m = p1x1 + p2x2 + p3x3...
 		double crafts = Math.cbrt(((double)budget * ratios[0] * ratios[2]) / (economy.prices[Resource.goods.ordinal()]*economy.prices[Resource.crafts.ordinal()]*economy.prices[Resource.food.ordinal()]));
-		wanted.insert(new ResourcePile(Resource.crafts,(int)crafts));
-		wanted.insert(new ResourcePile(Resource.goods, (int) (crafts/ratios[0])));
-		wanted.insert(new ResourcePile(Resource.food, (int) (crafts/ratios[2])));
+		wanted.insert(new ResourcePile(Resource.crafts,crafts));
+		wanted.insert(new ResourcePile(Resource.goods, (crafts/ratios[0])));
+		wanted.insert(new ResourcePile(Resource.food, (crafts/ratios[2])));
 		
 		return wanted;
 	}
@@ -640,7 +647,7 @@ public class Person{
 		listings.clear();
 		for(Home curr:realestate){
 			if(curr.currentImprovement > 0){
-				listings.add(new Listing((int) (curr.getCost().getValue() * (1-preferences.get(Preference.greed))), curr, this));
+				listings.add(new Listing(curr.getCost().getValue() * (1-preferences.get(Preference.greed)), curr, this));
 			}
 		}
 	}
