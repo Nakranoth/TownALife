@@ -55,8 +55,6 @@ public class City {
 	private static int workingPopSize = 0;
 	
 	private static int[] buildingsOfType = null;
-
-	double[] netDemand = new double[Resource.values().length];	//generally, how much people want a resource vs how much there is. Also, average value the resource has.
 	
 	int yearsToRun = 100;
 
@@ -197,7 +195,7 @@ public class City {
 			Statistics.addThisYear(meanUtility, utilDeviation);
 			year++;
 		}
-		if(year >= 100 && alive.size() > 75){
+		if(year >= 100 && alive.size() > 300){
 			
 			System.out.println("Exit: "+alive.size());
 			try {
@@ -216,7 +214,7 @@ public class City {
 				System.err.println("City: Buffered Writer");
 				e.printStackTrace();
 			}
-			if (alive.size()>150)Statistics.save();//TODO find good value to save
+			if (alive.size()>500)Statistics.save();//TODO find good value to save
 		}
 	}
 

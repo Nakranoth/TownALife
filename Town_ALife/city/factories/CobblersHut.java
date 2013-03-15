@@ -15,7 +15,7 @@ public class CobblersHut extends Factory {
 	{
 		super(costs, 5,ordinal);
 		name = "Cobbler's Hut";
-		tasks.add(new Task(Resource.stone, 3, 50,SkillType.quarryer));	//2x efficiency from homestead. Still slow.
+		tasks.add(new Task(Resource.stone, 3, 25,SkillType.quarryer));	//2x efficiency from homestead. Still slow.
 	}
 
 	public CobblersHut(CobblersHut clone){
