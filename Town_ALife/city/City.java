@@ -17,7 +17,7 @@ import people.Person;
 import people.Person.SkillType;
 import people.Preferences;
 import city.ResourcePile.Resource;
-import city.factories.BakersHut;
+import city.factories.Bakery;
 import city.factories.BlacksmithsHut;
 import city.factories.CobblersHut;
 import city.factories.ForestryHut;
@@ -56,7 +56,7 @@ public class City {
 	
 	private static int[] buildingsOfType = null;
 	
-	int yearsToRun = 100;
+	int yearsToRun = 400;
 
 	private double meanUtility;
 	private double utilDeviation;
@@ -195,9 +195,9 @@ public class City {
 			Statistics.addThisYear(meanUtility, utilDeviation);
 			year++;
 		}
-		if(year >= 100 && alive.size() > 300){
+		if(year >= 200){// && alive.size() > 300){
 			
-			System.out.println("Exit: "+alive.size());
+			System.out.println("Exit: "+alive.size()+","+year);
 			try {
 				File file = new File("preferences");
 				if(!file.exists()){
@@ -214,7 +214,8 @@ public class City {
 				System.err.println("City: Buffered Writer");
 				e.printStackTrace();
 			}
-			if (alive.size()>500)Statistics.save();//TODO find good value to save
+			//if (alive.size()>500)
+				Statistics.save();//Just save this run.
 		}
 	}
 
@@ -232,7 +233,7 @@ public class City {
 		Factory.samples.add(new ForestryHut(1));
 		Factory.samples.add(new CobblersHut(2));
 		Factory.samples.add(new BlacksmithsHut(3));
-		Factory.samples.add(new BakersHut(4));
+		Factory.samples.add(new Bakery(4));
 		Factory.samples.add(new Mine(5));
 		
 		File loadFrom = new File("clean");
@@ -319,7 +320,7 @@ public class City {
 	}
 	
 	public static void main(String[] args){
-		while (true){
+		//while (true){
 			for(int i = 0; i < 100; i++){
 				new City();
 			}
@@ -337,6 +338,6 @@ public class City {
 				e.printStackTrace();
 			}
 			System.out.println("Done");
-		}
+		//}
 	}
 }

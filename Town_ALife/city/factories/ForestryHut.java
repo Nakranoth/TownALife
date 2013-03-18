@@ -16,7 +16,7 @@ public class ForestryHut extends Factory {
 		
 		name = "Forestry Hut";
 		tasks.add(new Task(Resource.wood, 3, 50,SkillType.logger));	//2x efficiency from homestead. Still slow.
-		tasks.add(new Task(Resource.crafts, Resource.wood, 2, 50, 0.5, SkillType.logger));
+		tasks.add(new Task(Resource.crafts, Resource.wood, 2, 50, 0.5, SkillType.carpenter));
 	}
 
 	public ForestryHut(ForestryHut clone) {
