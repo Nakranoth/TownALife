@@ -7,7 +7,7 @@ import city.ResourcePile.Resource;
 
 public class Shack extends Home {
 
-	static ResourcePile[] costPiles = { new ResourcePile(Resource.stone,50), new ResourcePile(Resource.wood, 100)};	//3 man/years of solid homestead work.
+	static ResourcePile[] costPiles = { new ResourcePile(Resource.stone,50), new ResourcePile(Resource.wood, 50)};	//3 man/years of solid homestead work.
 	static Bundle costs = new Bundle(costPiles);
 	
 	public Shack()

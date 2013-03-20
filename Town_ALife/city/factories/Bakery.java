@@ -9,14 +9,14 @@ import city.Task;
 
 public class Bakery extends Factory {
 
-	static ResourcePile[] costPiles = { new ResourcePile(Resource.stone,50), new ResourcePile(Resource.wood, 100)};
+	static ResourcePile[] costPiles = { new ResourcePile(Resource.stone,50), new ResourcePile(Resource.wood, 50)};
 	static Bundle costs = new Bundle(costPiles); 
 	
 	public Bakery(int ordinal)
 	{
 		super(costs, 2,ordinal);
-		name = "Bakery Hut";
-		tasks.add(new Task(Resource.food, Resource.crops, 2, 60, 0.667,SkillType.chef));	//60 crops to 40 food	
+		name = "Bakery";
+		tasks.add(new Task(Resource.food, Resource.crops, 4, 180, 0.667,SkillType.chef));	//60 crops to 40 food	
 	}
 
 	public Bakery(Bakery clone){

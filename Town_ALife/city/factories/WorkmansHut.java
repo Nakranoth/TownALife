@@ -13,14 +13,14 @@ import city.Task;
  */
 public class WorkmansHut extends Factory {
 
-	private static Bundle costs = new Bundle(new ResourcePile(Resource.wood, 150));
+	private static Bundle costs = new Bundle(new ResourcePile(Resource.wood, 100));
 
 	public WorkmansHut(int ordinal)
 	{
 		super(costs, 3, ordinal);
 		name = "Workman's Hut";
 		
-		tasks.add(new Task(Resource.wood, 2, 20,SkillType.logger));		//Huts are Terrible sources of income.
+		tasks.add(new Task(Resource.wood, 2, 10,SkillType.logger));		//Huts are Terrible sources of income.
 		
 		tasks.add(new Task(Resource.stone, 2, 20,SkillType.quarryer));
 		

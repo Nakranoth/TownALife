@@ -9,7 +9,7 @@ import city.Task;
 
 public class CobblersHut extends Factory {
 
-	static Bundle costs = new Bundle(new ResourcePile(Resource.wood,250)); 
+	static Bundle costs = new Bundle(new ResourcePile(Resource.wood,125)); 
 	
 	public CobblersHut(int ordinal)
 	{

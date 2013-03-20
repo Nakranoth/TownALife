@@ -2,7 +2,7 @@ package people;
 
 import java.util.Comparator;
 
-public class CorpRatioComp implements Comparator<Corporation> {
+public class CorpRatioComparator implements Comparator<Corporation> {
 
 	@Override
 	public int compare(Corporation o1, Corporation o2) {

@@ -18,7 +18,7 @@ public class Preferences {
 	//Set of all preferences for easy access.
 	public static enum Preference {stubbornness,timeScale,incomeAlloc,goodsAlloc,
 		upkeepAlloc,upkeepCap,newHomeAlloc,childAlloc,greed,craftUtil,
-		goodUtil,foodUtil,homeUtil,need,love, smallestAlloc};
+		goodUtil,foodUtil,homeUtil,need,love, opCostCap};
 		
 	public static File loadFrom = null;
 	private static ArrayList<Preferences> loaded = new ArrayList<Preferences>();
@@ -49,8 +49,13 @@ public class Preferences {
 				int i = 0;
 				Preferences insert = new Preferences();
 				while (lineIter.hasNext()){
+					try{
 					flag = lineIter.next();	//gets a pair
 					value = lineIter.nextDouble();
+					}catch(Exception e)
+					{
+						e.printStackTrace();
+					}
 					insert.put(Enum.valueOf(Preference.class, flag), value);
 					if (i%Preference.values().length == Preference.values().length - 1){
 						//insert.put(Preference.smallestAlloc, 0.01); i++;	//temporary to load new value type.
@@ -65,7 +70,6 @@ public class Preferences {
 				e.printStackTrace();
 			}
 		}
-		// TODO Auto-generated constructor stub
 	}
 	
 	/**
@@ -110,30 +114,19 @@ public class Preferences {
 		return preferences.entrySet();
 	}
 
-	//linear transformation; maps smallest value to minimum; maximum is what you would get if all values are same, except one larger.  
-	public void normalize(Preference[] keys, double minimum, double maximum) {
-		double min = Double.MAX_VALUE;
-		double curr;
-		for (Preference key : keys)
-		{
-			curr = preferences.get(key);
-			if (curr < min)
-			{
-				min = curr;
-			}
-		}
-		//shift to 0, and sum.
+	//linear transformation; maximum is the sum of all units.  
+	public void normalize(Preference[] keys, double maximum) {
 		double sum = 0.0;
 		for (Preference key : keys)
 		{
-			preferences.put(key, preferences.get(key) - min);
+			preferences.put(key, preferences.get(key));
 			sum += preferences.get(key);
 		}
 		
-		double scale = (maximum - minimum) / sum;
+		double scale = maximum / sum;
 		for (Preference key : keys)
 		{
-			preferences.put(key, preferences.get(key) * scale + minimum);
+			preferences.put(key, preferences.get(key) * scale);
 		}
 	}
 

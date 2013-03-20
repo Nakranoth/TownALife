@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.ListIterator;
+import java.util.Random;
 
 import people.Person.SkillType;
 import people.Preferences.Preference;
@@ -23,39 +24,40 @@ public class Corporation{
 	public LinkedList<Person> workers = new LinkedList<Person>();
 
 	//private LinkedList<Double> annualProfits = new LinkedList<Double>();
-	public double annualProfitability;	//How much a corp expects to be able to make every year, if it can hire workers.
+	public double profitability;	//How much a corp expects to be able to make every year, if it can hire workers.
 	public double cheapestStock;	//The cheapest stock available for sale.
 	public Double profitRatio = Double.POSITIVE_INFINITY;
 	public CorpMember cheapestSeller = null;
 	
 	public Double wage;	//the value of the wage, rather than the number of the good.
+	private static Random rand = new Random();//adds noise.
 	
 	public Corporation(Factory holding, Person owner){
 		this.holding = holding;
 		operatingCost.goal = holding.getOperatingCost();
 		members.add(new CorpMember(owner, 100));
 		cheapestSeller = members.get(0);
-		annualProfitability = holding.getProfitability(operatingCost.goal);;//smoothed profit function.
+		profitability = holding.getProfitability(operatingCost.goal);;//smoothed profit function.
 	}
 	
 	/**
 	 * Computes, stores, and returns the wage this corp will pay out.
-	 * If wage is zero, predicted profit was zero or less, so wages should fall.
 	 */
 	public double setWage(){
 		wage = 0D;
 		
-		double currProfit = holding.getProfitability(operatingCost.resources);
-		annualProfitability += (currProfit - annualProfitability);///5; already smoothed via prices.
+		profitability = holding.getProfitability(operatingCost.resources);
+		//annualProfitability += (currProfit - annualProfitability)*0.75;//; already smoothed via prices.
 		updateCheapest();
 		
 		for(CorpMember owner:members){
 			if(owner.person.alive){	//ignore the dead.
 				double greed = owner.person.preferences.get(Preference.greed);
-				wage += Math.max(currProfit * Math.max(0.001,greed),0D)*owner.ownership/100D;
+				wage += Math.max(profitability * Math.max(0.001,greed),0D)*owner.ownership/100D;
 			}
 		}
-		wage = wage / holding.getTaskCapacity();	//better to store as per person.
+		wage += wage * (rand.nextGaussian()/2);	//should cause some fuzzing in selection of jobs.
+		wage = wage / holding.getTaskAdjustedCapacity();	//better to store as per person.
 		return wage;
 	}
 	
@@ -68,7 +70,7 @@ public class Corporation{
 		SkillType active = holding.getRelevantSkill();
 		if (active == null) return 0;	//no active skill is bad.
 		workers.clear();
-		int capacity = holding.getTaskCapacity();
+		int capacity = holding.getTaskAdjustedCapacity();
 		
 		for (Person worker:workPool){
 			//do an insertion Sort.
@@ -116,14 +118,14 @@ public class Corporation{
 		cheapestStock = Double.POSITIVE_INFINITY;
 		for(CorpMember seller:members){
 			if (seller.person.alive){
-				double sellerPrice = seller.person.preferences.get(Preference.timeScale) * annualProfitability / 100;
+				double sellerPrice = seller.person.preferences.get(Preference.timeScale) * profitability / 100;
 				if (sellerPrice < cheapestStock){
 					cheapestSeller = seller;
 					cheapestStock = sellerPrice;
 				}
 			}
 		}
-		profitRatio = cheapestStock/(annualProfitability/100D);
+		profitRatio = cheapestStock/(profitability/100D);
 	}
 
 	/**
@@ -132,8 +134,8 @@ public class Corporation{
 	 * @param available The "resources" bundle from the relevant allocation.
 	 */
 	public void buyShares(Person buyer, Bundle available){
-		double worth = buyer.preferences.get(Preference.timeScale) * annualProfitability / 100;
-		while (available.getValue() > cheapestStock && cheapestSeller.person != buyer && cheapestStock < worth){
+		double worth = buyer.preferences.get(Preference.timeScale) * profitability / 100;
+		while (available.getValue() > cheapestStock && cheapestSeller.person != buyer && cheapestStock < worth && cheapestStock > 0){
 			int shares = (int) Math.min(cheapestSeller.ownership, available.getValue() / cheapestStock);
 			double maximumPrice = cheapestStock * shares;
 			try {
@@ -158,7 +160,7 @@ public class Corporation{
 			if (member.person == buyer) corpBuyer = member;
 		}
 		if (corpSeller == null || corpSeller.ownership < shares) 
-			throw new BadSellerException(buyer, seller, this);
+			return;
 		if (corpBuyer == null)
 		{
 			corpBuyer = new CorpMember(buyer, shares);
@@ -172,6 +174,7 @@ public class Corporation{
 		if(corpSeller.ownership <= 0) {
 			members.remove(corpSeller);	//No remote drop. This way we avoid concurrency errors during death.
 		}
+		updateCheapest();
 	}
 	
 	public void transferOfOwnership(Person seller, Person buyer, int shares) throws BadSellerException	{
@@ -251,6 +254,6 @@ public class Corporation{
 	}
 	
 	public String toString(){
-		return holding.toString()+annualProfitability;
+		return holding.toString()+profitability;
 	}
 }

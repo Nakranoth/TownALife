@@ -10,7 +10,7 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.Iterator;
 
-import people.CorpRatioComp;
+import people.CorpRatioComparator;
 import people.CorpWageComp;
 import people.Corporation;
 import people.Person;
@@ -38,7 +38,7 @@ public class City {
 	static SimpleDateFormat sdf = new SimpleDateFormat(DATE_FORMAT);
 	
 	
-	public static Economy economy = new Economy();
+	public static Economy economy = null;
 
 	public static ArrayList<Person> alive = new ArrayList<Person>();
 	public static ArrayList<Building> places = new ArrayList<Building>();
@@ -54,12 +54,13 @@ public class City {
 	private static int[] avgSkillHelper = new int[SkillType.values().length];
 	private static int workingPopSize = 0;
 	
-	private static int[] buildingsOfType = null;
+	int yearsToRun = 200;
+	private int toSave = 100;
+	private int feedback = 50;
 	
-	int yearsToRun = 400;
-
 	private double meanUtility;
 	private double utilDeviation;
+
 
 	public static int year = 1;	//avoid difficult starting nonsense.
 	
@@ -74,7 +75,9 @@ public class City {
 			for(Iterator<Corporation> i = allCorps.iterator();i.hasNext();){
 				foldCheck = i.next();
 				if(foldCheck.redistribute()||foldCheck.checkHoldings()) i.remove();
-			}
+			} 
+			
+			economy.updateMarketMaxSupply();
 			
 			for(Person ready:alive){	//ready minimum wage and give resources to corps.
 				ready.preWorkInit();
@@ -86,7 +89,6 @@ public class City {
 				if (toWage.setWage() > 0){
 					canPay.add(toWage);
 				}
-				buildingsOfType[toWage.holding.ordinal]++;	//Used for modifying wages.
 			}
 			
 			//ready workforce
@@ -141,11 +143,19 @@ public class City {
 			ArrayList<Person> marriable = new ArrayList<Person>();
 			ArrayList<Person> marriableWithHome = new ArrayList<Person>();
 			
-			Collections.sort(allCorps, new CorpRatioComp());	//sorts corps for buying shares faster.
+			Collections.sort(allCorps, new CorpRatioComparator());	//sorts corps for buying shares faster.
 			
 			//People consume, build, reproduce, age, find mates, move.
-			for(Person curr:alive){
+			
+			Iterator<Person> liveIter = alive.iterator();
+			Person curr;
+			while(liveIter.hasNext()){
+				curr = liveIter.next();
 				curr.handleAllocations();
+				if (!curr.alive){
+					liveIter.remove();
+					continue;
+				}
 				utilityHelper += curr.utility;
 				if(!curr.hasSpouse() && curr.realAge >= 16 && curr.realAge <= 60){
 					marriable.add(curr);
@@ -166,7 +176,6 @@ public class City {
 			alive.addAll(born);
 			
 			for(Person homeowner:marriableWithHome){
-				Person curr;
 				for(Iterator<Person> single = marriable.iterator();single.hasNext();){
 					curr = single.next();
 					if(curr.hasSpouse()) single.remove();//previously married this pass.
@@ -180,7 +189,6 @@ public class City {
 			meanUtility = utilityHelper / alive.size();
 			utilDeviation = stdDev(alive, meanUtility);
 			
-			Person curr;
 			for(Iterator<Person> i = alive.iterator();i.hasNext();){
 				curr = i.next();
 				curr.realAge++;
@@ -195,9 +203,11 @@ public class City {
 			Statistics.addThisYear(meanUtility, utilDeviation);
 			year++;
 		}
-		if(year >= 200){// && alive.size() > 300){
+		//System.out.println("Year:" + year);
+		if(year >= yearsToRun && alive.size() >= feedback){
 			
 			System.out.println("Exit: "+alive.size()+","+year);
+			feedback = alive.size();
 			try {
 				File file = new File("preferences");
 				if(!file.exists()){
@@ -214,7 +224,7 @@ public class City {
 				System.err.println("City: Buffered Writer");
 				e.printStackTrace();
 			}
-			//if (alive.size()>500)
+			if (alive.size() > toSave)
 				Statistics.save();//Just save this run.
 		}
 	}
@@ -236,12 +246,9 @@ public class City {
 		Factory.samples.add(new Bakery(4));
 		Factory.samples.add(new Mine(5));
 		
+		economy = new Economy();
+//typically used to load in old prefs.		
 		File loadFrom = new File("clean");
-		
-		buildingsOfType = new int[Factory.samples.size()];
-		
-
-
 		for(int i = 0; i < Factory.samples.size();i++){
 			ResourcePile[] startingGoods = {
 					new ResourcePile(Resource.crafts,10),
@@ -254,7 +261,7 @@ public class City {
 					new ResourcePile(Resource.stone,10)
 			};
 			
-			Person a = Person.loadPerson(loadFrom);
+			Person a = Person.loadPerson(loadFrom);//new Person(i % 2 == 0);//
 			a.realAge = 16;
 			a.effectiveAge = 16;
 			Corporation aCorp = new Corporation(Factory.samples.get(i).shallowClone(), a);
@@ -264,11 +271,12 @@ public class City {
 			Home shack = new Shack();
 			places.add(shack);
 			a.newRealestate(shack);
+			a.move();
 			a.income.insert(new Bundle(startingGoods));
 			alive.add(a);
 		}
 		
-		for(int i = 0; i < 9; i++){	//now with and extra 9 ppl, but with no corps.
+		for(int i = 0; i < 19; i++){	//now with and extra 9 ppl, but with no corps.
 			ResourcePile[] startingGoods = {
 					new ResourcePile(Resource.crafts,10),
 					new ResourcePile(Resource.crops,10),
@@ -279,12 +287,13 @@ public class City {
 					new ResourcePile(Resource.wood,10),
 					new ResourcePile(Resource.stone,10)
 			};
-			Person a = Person.loadPerson(loadFrom);
+			Person a =Person.loadPerson(loadFrom);
 			a.realAge = 16;
 			a.effectiveAge = 16;
 			Home shack = new Shack();
 			places.add(shack);
 			a.newRealestate(shack);
+			a.move();
 			a.income.insert(new Bundle(startingGoods));
 			alive.add(a);
 		}
@@ -299,9 +308,6 @@ public class City {
 	private void clearHelpers() {
 		for(int i = 0; i < SkillType.values().length; i++){
 			avgSkillHelper[i] = 0;
-		}
-		for(Factory type:Factory.samples){
-			buildingsOfType[type.ordinal] = 0;
 		}
 		workingPopSize = 0;
 		listings.clear();
@@ -320,7 +326,7 @@ public class City {
 	}
 	
 	public static void main(String[] args){
-		//while (true){
+		while (true){
 			for(int i = 0; i < 100; i++){
 				new City();
 			}
@@ -338,6 +344,6 @@ public class City {
 				e.printStackTrace();
 			}
 			System.out.println("Done");
-		//}
+		}
 	}
 }

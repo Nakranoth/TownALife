@@ -13,6 +13,7 @@ import city.Factory;
 import city.Home;
 import city.ResourcePile;
 import city.ResourcePile.Resource;
+import city.Statistics;
 import city.homes.Shack;
 import economy.Economy;
 import economy.Listing;
@@ -70,11 +71,12 @@ public class Person{
 		this();
 		preferences = new Preferences();
 		//TODO Load preferences
-		preferences.put(Preference.stubbornness, rand.nextDouble()*10);	//Reevaluate inferiority in yearly.
-		preferences.put(Preference.timeScale, rand.nextDouble()*20);		//how far we plan ahead in terms of income's value
+		preferences.put(Preference.stubbornness, rand.nextDouble()*3);	//Reevaluate inferiority in yearly.
+		preferences.put(Preference.timeScale, 20 + rand.nextGaussian()*10);		//how far we plan ahead in terms of income's value
 		preferences.put(Preference.incomeAlloc, 0.3);	//how much we spend on making more
+		preferences.put(Preference.opCostCap, 0.2);	//the maximum percent of our income we spend on operational costs.
 
-		preferences.put(Preference.goodsAlloc, 0.3);		//What we spend on consumer goods.
+		preferences.put(Preference.goodsAlloc, 0.8);		//What we spend on consumer goods.
 		
 		preferences.put(Preference.upkeepAlloc, 0.1);	//Spending on home maintenance. Rolled into saving for new home if overflowing cap.
 		preferences.put(Preference.upkeepCap, 3.0);		//If spending more than cap/20 of cost on upkeep, roll to next home savings.
@@ -89,14 +91,12 @@ public class Person{
 		
 		preferences.put(Preference.craftUtil, 1.0);
 		preferences.put(Preference.goodUtil, 1.0);
-		preferences.put(Preference.foodUtil, 1.1);
+		preferences.put(Preference.foodUtil, 1.5);
 		preferences.put(Preference.homeUtil, 1.0);
 		
-		preferences.put(Preference.need, 3.0);	//If I can't afford at least this many of each good, I won't work.
+		preferences.put(Preference.need, 3.0+rand.nextDouble());	//If I can't afford at least this many of each good, I won't work.
 		
-		preferences.put(Preference.love, 0.05);	//How similar utility needs to be for marriage.
-		
-		preferences.put(Preference.smallestAlloc, 0.01);	//The "small" number in alloc normalization
+		preferences.put(Preference.love, 0.05+rand.nextDouble()/10);	//How similar utility needs to be for marriage.
 		
 		tweakPrefs();
 		
@@ -144,10 +144,13 @@ public class Person{
 	 * Makes adjustments as needed to preference set.
 	 */
 	private void tweakPrefs() {
-		preferences.normalize(utilitySet, 1, 20);
-		preferences.normalize(allocSet, preferences.get(Preference.smallestAlloc), 1.0);
+		preferences.normalize(utilitySet, 20);
+		preferences.normalize(allocSet, 1.0);
 		preferences.setMinimum(Preference.timeScale, 1.0);
+		preferences.setMinimum(Preference.stubbornness, 1.0);
+		preferences.setMinimum(Preference.opCostCap, 0.01);
 		preferences.setMaximum(Preference.greed, 1.0);
+		preferences.setMaximum(Preference.opCostCap, 1.0);
 	}
 
 	private Person() {
@@ -173,11 +176,15 @@ public class Person{
 	 * Also consolidates all demands into demandedGoods.
 	 */
 	public void readyAllocations(){
-		//demandedGoods = new Bundle(); Handled in allocation.
 		
-		allocations[4].demand = computeOperationalCosts();	//Operational costs
+		//clean out income bundle.
+		income.cleanNegatives();
+		
+		allocations[4].goal = computeOperationalCosts();	//Operational costs
+		allocations[4].demand = allocations[4].getDemand(income.getValue() * preferences.get(Preference.opCostCap));	//Now with a cap.
 		incomeValue = income.getValue() - allocations[4].demand.minus(allocations[4].resources).getValue();//we immediately lose the value of demanded operational costs.
-		//if (incomeValue < 0) incomeValue = Long.MAX_VALUE;//We overflowed... Wowza.	We CAN have negatives here.
+		
+		
 		allocations[0].demand = computeGoodsBundle();	//goods
 		
 		if(allocations[1].building != home)
@@ -185,6 +192,7 @@ public class Person{
 			if (home == null || (family.father != null && family.father.home == home) || (family.mother != null && family.mother.home == home))
 			{
 				allocations[1].goal = new Bundle();	//empty goal. yay.
+				allocations[1].building = null;
 			}
 			else {
 				allocations[1].goal = computeUpkeepCap();
@@ -195,15 +203,12 @@ public class Person{
 		double upkeepDemandValue = incomeValue * preferences.get(Preference.upkeepAlloc);
 		allocations[1].demand = allocations[1].getDemand(upkeepDemandValue);
 		//the difference between upkeepDemandValue and allocations[1].demand.getValue() gets added to allocations[2] (savings)
-		Bundle upkeepRefund = allocations[1].refundExcessSupply();
-		income.insert(upkeepRefund);
-		
+
 		//Update planned home.
 		updateHomePlan();
-		
-		double homeSavings = incomeValue * preferences.get(Preference.newHomeAlloc) + upkeepRefund.getValue();
+		double homeSavings = incomeValue * preferences.get(Preference.newHomeAlloc) + upkeepDemandValue - allocations[1].demand.getValue();
 		allocations[2].refreshGoal();
-		allocations[2].demand = allocations[2].getDemand(homeSavings);
+		allocations[2].demand = allocations[2].getDemand(homeSavings);//allocations[2].demand.getValue()
 		income.insert(allocations[2].refundExcessSupply());	//The value is still in the demand.
 		
 		allocations[3].goal = computeChildSupport();
@@ -211,7 +216,8 @@ public class Person{
 		income.insert(allocations[3].refundExcessSupply());
 		
 		if(realAge % preferences.get(Preference.stubbornness).intValue() == 0){
-			allocations[5].planBuilding(preferences.get(Preference.timeScale).intValue(),(incomeValue * preferences.get(Preference.incomeAlloc)));
+			Bundle temp = allocations[5].planBuilding(preferences.get(Preference.timeScale).intValue(),(incomeValue * preferences.get(Preference.incomeAlloc)),preferences.get(Preference.greed) );
+			if (temp != null) income.insert(temp);	//refunded abandoned plans.
 		}
 		allocations[5].demand = allocations[5].getDemand(incomeValue * preferences.get(Preference.incomeAlloc));
 		income.insert(allocations[5].refundExcessSupply());
@@ -262,6 +268,7 @@ public class Person{
 		
 		//consume a[0]
 		computeUtility(allocations[0].resources);
+		if(!alive) return;
 		allocations[0].resources = new Bundle();	//actually uses the whole bundle.
 		
 		//check against a[1]
@@ -281,22 +288,23 @@ public class Person{
 		double buildingRatio = (double) (newIncomeBudget.building==null?Double.MAX_VALUE:newIncomeBudget.building.getCost().getValue()) / (double)newIncomeBudget.adjustedProfitability;
 		boolean madePurchase = false;
 		for (Corporation seller:City.allCorps){
-			double worth = preferences.get(Preference.timeScale) * seller.annualProfitability / 100;
+			double worth = preferences.get(Preference.timeScale) * seller.profitability / 100;
 			double budgetValue = newIncomeBudget.resources.getValue();
 			if(seller.profitRatio > buildingRatio) break;	//once the stock is too expensive, we stop.
-			while (worth > seller.cheapestStock && seller.profitRatio < buildingRatio && budgetValue > seller.cheapestStock && seller.cheapestSeller.person != this){	//the stock is more valuable than the building
+			while (worth > 0 && worth > seller.cheapestStock && seller.profitRatio < buildingRatio && budgetValue > seller.cheapestStock && seller.cheapestSeller.person != this){	//the stock is more valuable than the building
 				madePurchase = true;
 				seller.buyShares(this, newIncomeBudget.resources);
 				budgetValue = newIncomeBudget.resources.getValue();
 			}
 		}
-		if (madePurchase) Collections.sort(City.allCorps, new CorpRatioComp());//resort after purchases.
+		if (madePurchase) Collections.sort(City.allCorps, new CorpRatioComparator());//resort after purchases.
 		
-		if(newIncomeBudget.hasEnough() && newIncomeBudget.building != null){
+		if(newIncomeBudget.hasEnough() && newIncomeBudget.building != null && ((Factory)newIncomeBudget.building).getProfitability() > 1 - preferences.get(Preference.greed)){
 			Corporation newCorp = new Corporation(((Factory) newIncomeBudget.building).shallowClone(), this);
 			City.allCorps.add(newCorp);
 			City.places.add(newCorp.holding);
 			ownerships.add(newCorp);
+			Statistics.corpClass[newCorp.holding.ordinal]++;
 		}
 	}
 
@@ -430,6 +438,7 @@ public class Person{
 				if (curr.alive){
 					curr.realestate.add(home);
 					curr.realestate.addAll(realestate);
+					break;
 				}
 			}
 			if (numChildren == 0){	//no surviving heirs
@@ -445,6 +454,9 @@ public class Person{
 		home = null;
 		realestate = null;
 		family = null;	//makes sure the dead are eventually forgotten when their immediate family dies.
+		for (Listing list:listings){
+			City.listings.remove(list);//makes sure no one tries to buy it while I'm dead.
+		}
 	}
 
 	public void addCorp(Corporation corporation) 
@@ -454,6 +466,7 @@ public class Person{
 	
 	public void dropCorp(Corporation corporation) 
 	{
+		if (ownerships != null)
 		ownerships.remove(corporation);
 	}
 	
@@ -502,23 +515,9 @@ public class Person{
 		Bundle wanted = new Bundle();
 		double budget = incomeValue * preferences.get(Preference.goodsAlloc);
 		
-		//utility functions.
-		double ratios[] = new double[3];
-		double craftUtil = preferences.get(Preference.craftUtil);
-		double craftPrice = economy.prices[Resource.crafts.ordinal()];
-		double goodUtil = preferences.get(Preference.goodUtil);
-		double goodPrice = economy.prices[Resource.goods.ordinal()];
-		double foodUtil = preferences.get(Preference.foodUtil);
-		double foodPrice = economy.prices[Resource.food.ordinal()];
-		ratios[0] = (craftUtil*goodPrice) / (goodUtil*craftPrice);// crafts/goods
-		ratios[1] = (goodUtil*foodPrice) / (foodUtil*goodPrice);// goods/food
-		ratios[2] = ratios[1]/ratios[0]; // crafts/food
-		
-		//m = p1x1 + p2x2 + p3x3...
-		double crafts = Math.cbrt(((double)budget * ratios[0] * ratios[2]) / (economy.prices[Resource.goods.ordinal()]*economy.prices[Resource.crafts.ordinal()]*economy.prices[Resource.food.ordinal()]));
-		wanted.insert(new ResourcePile(Resource.crafts,crafts));
-		wanted.insert(new ResourcePile(Resource.goods, (crafts/ratios[0])));
-		wanted.insert(new ResourcePile(Resource.food, (crafts/ratios[2])));
+		wanted.insert(new ResourcePile(Resource.crafts, preferences.get(Preference.craftUtil)*budget/City.economy.prices[Resource.crafts.ordinal()]));
+		wanted.insert(new ResourcePile(Resource.goods, preferences.get(Preference.goodUtil)*budget/City.economy.prices[Resource.goods.ordinal()]));
+		wanted.insert(new ResourcePile(Resource.food, preferences.get(Preference.foodUtil)*budget/City.economy.prices[Resource.food.ordinal()]));
 		
 		return wanted;
 	}
@@ -581,7 +580,7 @@ public class Person{
 		Iterator<Home> i = realestate.iterator();
 		while(i.hasNext()){
 			Home estate = i.next();
-			if(estate == null){	//Clean out any collapsed buildings.
+			if(estate == null || estate.occupants.size() != 0){	//Clean out any collapsed or somehow occupied buildings.
 				i.remove();
 				continue;
 			}
@@ -636,9 +635,9 @@ public class Person{
 	private void computeUtility(Bundle resources) {
 		utility = 0.0;
 		for (ResourcePile pile:resources){
-			if (pile.type == Resource.food) utility += Math.max(0.0, preferences.get(Preference.foodUtil)*Math.log(pile.amount)+0.2);
-			else if (pile.type == Resource.goods) utility += Math.max(0.0, preferences.get(Preference.goodUtil)*Math.log(pile.amount)+0.2);
-			else if (pile.type == Resource.crafts) utility += Math.max(0.0, preferences.get(Preference.craftUtil)*Math.log(pile.amount)+0.2);
+			if (pile.type == Resource.food) utility += Math.max(0.0, preferences.get(Preference.foodUtil)*Math.log(pile.amount)+0.02);
+			else if (pile.type == Resource.goods) utility += Math.max(0.0, preferences.get(Preference.goodUtil)*Math.log(pile.amount)+0.02);
+			else if (pile.type == Resource.crafts) utility += Math.max(0.0, preferences.get(Preference.craftUtil)*Math.log(pile.amount)+0.02);
 		}
 		utility += (home == null?0:home.currentImprovement) * preferences.get(Preference.homeUtil);
 	}

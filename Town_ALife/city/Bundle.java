@@ -177,16 +177,13 @@ public class Bundle implements Iterable<ResourcePile>{
 	}
 
 	/**
-	 * Returns the pile associated with the Resource type.
-	 * May return a pile with contents 0, but never null.
+	 * Returns the internal ResourcePile that matches type.
 	 */
-	public ResourcePile getType(Resource type) {
-		for (ResourcePile pile:contents){
-			if (pile.type == type) return pile;
+	public ResourcePile getResource(Resource type){
+		for (ResourcePile curr:contents){
+			if (curr.type == type) return curr;
 		}
-		ResourcePile missing = new ResourcePile(type,0);
-		contents.add(missing);
-		return missing;
+		return new ResourcePile(type, 0);
 	}
 	
 	/**
@@ -252,16 +249,6 @@ public class Bundle implements Iterable<ResourcePile>{
 		}
 		return result;
 	}
-	
-	/**
-	 * Returns the internal ResourcePile that matches type.
-	 */
-	public ResourcePile getResource(Resource type){
-		for (ResourcePile curr:contents){
-			if (curr.type == type) return curr;
-		}
-		return new ResourcePile(type, 0);
-	}
 
 	/**
 	 * Returns nearly the cheapest bundle worth at least maxPrice containted in this bundle.
@@ -324,5 +311,22 @@ public class Bundle implements Iterable<ResourcePile>{
 			times.insert(new ResourcePile(pile.type,pile.amount*ratios[pile.type.ordinal()]));
 		}
 		return times;
+	}
+	
+	public String toString(){
+		return contents.toString();
+	}
+
+	public Bundle trimToPrice(double value) {
+		double scale = Math.min(1.0, value/getValue());
+		return this.times(scale);
+	}
+
+	public void cleanNegatives() {
+		Iterator<ResourcePile> i = contents.iterator();
+		while (i.hasNext()){
+			ResourcePile curr = i.next();
+			if (curr.amount <=0) i.remove();
+		}
 	}
 }

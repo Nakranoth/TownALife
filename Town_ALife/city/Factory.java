@@ -39,37 +39,38 @@ public abstract class Factory extends Building {
 	
 
 	public double getProfitability(Bundle resources){
-		if (lastUpdated < City.year || mostProfitable == null){
-			lastUpdated = City.year;
-			Task profitable = null;
-			double forecast = 0;
-			
-			for(Task curr:tasks){
-				curr.reGuess(resources);
-				double currOut = City.economy.prices[curr.getOutput().type.ordinal()] * curr.getOutput().amount;
-				double currCost = City.economy.prices[curr.getInput().type.ordinal()] * curr.getInput().amount;
-				if (currOut-currCost > forecast || (currOut-currCost == forecast && rand.nextBoolean())){
-					profitable = curr;
-					forecast = currOut-currCost;
-				}
+		lastUpdated = City.year;
+		Task profitable = null;
+		double forecast = 0;
+		double cumulativeWeight = 0;	//used to allow sequential computation of probabilities. 
+		
+		for(Task curr:tasks){
+			curr.reGuess(resources,1.0);
+			double currOut = City.economy.prices[curr.getOutput().type.ordinal()] * curr.getOutput().amount;
+			double currCost = City.economy.prices[curr.getInput().type.ordinal()] * curr.getInput().amount;
+			double currProfit = currOut - currCost;
+			if (currProfit + 1 > currProfit) 
+				cumulativeWeight += currProfit;
+			if (currProfit > 0 && rand.nextDouble() < currProfit / cumulativeWeight ){
+				profitable = curr;
+				forecast = currProfit;
 			}
-			mostProfitable = profitable;
-			return forecast;
 		}
-		else{
-			double output = City.economy.prices[mostProfitable.getOutput().type.ordinal()] * mostProfitable.getOutput().amount;
-			double cost = City.economy.prices[mostProfitable.getInput().type.ordinal()] * mostProfitable.getInput().amount;
-			return Math.max(output - cost, 0);
-		}
+		if (profitable != null){
+			profitable.reGuess(resources,cumulativeWeight/forecast);
+			forecast = City.economy.prices[profitable.getOutput().type.ordinal()] * profitable.getOutput().amount 
+						- City.economy.prices[profitable.getInput().type.ordinal()] * profitable.getInput().amount;
+		} 
+		mostProfitable = profitable;
+		return forecast;
 	}
 	
 	public void updateGuesses(){
-		if(lastUpdated < City.year){
-			for (Task curr:tasks){
-				curr.reGuess();
-			}
-			lastUpdated = City.year;
+		for (Task curr:tasks){
+			curr.reGuess();
+			curr.reGuess(new Bundle(curr.getUnthrottledInput()), 1.0);	//adjusts for market saturation.
 		}
+		lastUpdated = City.year;
 	}
 	
 	/**
@@ -108,19 +109,21 @@ public abstract class Factory extends Building {
 		
 		for(Task task:tasks){
 			task.reGuess();
-			operatingCost.insert(task.getInput());
+			operatingCost.insert(task.getUnthrottledInput());
 		}
 		
 		return operatingCost;
 	}
 	
-	public int getTaskCapacity(){
+	public int getTaskAdjustedCapacity(){
 		if (mostProfitable == null) getProfitability();
 		if (mostProfitable == null) return 0;
-		return mostProfitable.getMaxWorkers();
+		
+		return mostProfitable.getWorkers();
 	}
 
 	public double getProfitability() {
 		return getProfitability(getOperatingCost());
 	}
+
 }

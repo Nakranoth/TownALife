@@ -22,6 +22,8 @@ public class Statistics {
 	public static ArrayList<String> population = null;	//Total, % male, mean util, util deviation, home type counts.
 	public static ArrayList<String> corps = null;	//by type
 	
+	public static int[] corpClass = null;
+	
 	/**
 	 * Initializes this for use. Should be called per new city.
 	 */
@@ -29,6 +31,8 @@ public class Statistics {
 		supplies = new ArrayList<String>();
 		demands = new ArrayList<String>();
 		prices = new ArrayList<String>();
+		
+		corpClass = new int[Factory.samples.size()];//prevents null pointer in first year. Will be replaced without additional use.
 		
 		population = new ArrayList<String>();	//Total, % male, mean util, util deviation, home type counts.
 		corps = new ArrayList<String>();
@@ -46,7 +50,7 @@ public class Statistics {
 		prices.add(construct);
 		
 		population.add( new String("Year,Total,Percent Male,Mean Utility,Utility Standard Deviation, Homeless,Shack,Homestead,Villa"));
-		corps.add(new String("Year,Baker's Huts,Blacksmith's Huts,Cobbler's Hut,Forestry Hut,Workman's Hut"));
+		corps.add(new String("Year,Baker's Huts,Blacksmith's Huts,Cobbler's Hut,Forestry Hut,Workman's Hut,Mine"));
 	}
 	
 	/**
@@ -59,7 +63,6 @@ public class Statistics {
 		demands.add(City.economy.getDemandString());
 		prices.add(City.economy.getPriceString());
 		
-		
 		String popString = new String(City.year + ",");
 		int male = 0;	//must divide by pop
 		int[] homeClass = new int[4];
@@ -69,14 +72,16 @@ public class Statistics {
 		}
 		popString += City.alive.size() + "," + ((double)male / (double)City.alive.size())+","+meanUtil+","+utilStdDev+",";
 		for(int i = 0; i<4;i++){
-			popString += homeClass[i] == 0?"":homeClass[i] + ",";	//leave cells with 0 buildings empty.
+			popString += homeClass[i] == 0?",":homeClass[i] + ",";	//leave cells with 0 buildings empty.
 		}
 		population.add(popString.trim());
 		
-		String corpString = new String();
-		int[] corpClass = new int[Factory.samples.size()];
+		
+		corpClass = new int[Factory.samples.size()];	//running count of corps by type.
+		
+		String corpString = new String(City.year + ",");
 		for(Corporation aCorp:City.allCorps){
-			if (aCorp.holding.ordinal > 0){
+			if (aCorp.holding.ordinal >= 0){
 				corpClass[aCorp.holding.ordinal]++;
 			}
 		}

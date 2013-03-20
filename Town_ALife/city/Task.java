@@ -15,7 +15,8 @@ public class Task {
 	private double inputQuantity = 0;
 	private double outputQuantity;
 	
-	public int lastUpdated = 0;
+	private double unthrottledOutputQuantity;
+	private double unthrottledInputQuantity;
 	
 	public Task(Resource output, int maxWorkers, double efficency, SkillType skill) {
 		this(output, (Resource)null, maxWorkers, efficency, 0.0D, skill);
@@ -38,15 +39,24 @@ public class Task {
 	}
 
 	/*
-	 * This pair designed for evaluating this task's net output.
+	 * Evaluates this task's net output.
 	 */
 	public ResourcePile getInput(){
 		if(input == null) return new ResourcePile(Resource.wood,0);
 		return new ResourcePile(input,inputQuantity);
 	}
 	
+	public ResourcePile getUnthrottledInput() {
+		if(input == null) return new ResourcePile(Resource.wood,0);
+		return new ResourcePile(input,unthrottledInputQuantity);
+	}
+	
 	public ResourcePile getOutput(){
 		return new ResourcePile(output,outputQuantity);
+	}
+	
+	public ResourcePile getUnthrottledOutput() {
+		return new ResourcePile(output,unthrottledOutputQuantity);
 	}
 	
 	/**
@@ -56,7 +66,6 @@ public class Task {
 	 * @return the resulting resource pile.
 	 */
 	public ResourcePile doWork(LinkedList<Person> workers, ResourcePile availResources){
-		lastUpdated++;	//updated for next year. Keeps real values, rather than guessing estimates.
 		double skillPool = 0;
 		double maxSkill = 0;	//Used to detect throttling
 		for(Person worker:workers){
@@ -87,31 +96,35 @@ public class Task {
 	
 	/**
 	 * Forces task to guess the output based on the average skill in the work force. 
-	 * @param resources 
+	 * @param resources Available resources for throttling
+	 * @param scale Used to upscale the throttle
 	 */
-	public void reGuess(Bundle resources){
-		if(City.year > lastUpdated){
-			double throttled = getThrottle(resources.getType(input).amount);
-			outputQuantity = Math.min(throttled, getReturns(maxWorkers * Math.max(1,City.avgSkill[skill.ordinal()])));
-			inputQuantity = getCosts(outputQuantity);
-			lastUpdated = City.year;
-		}
+	public void reGuess(Bundle resources, double scale){
+		double throttled = getThrottle(resources.getResource(input).amount);
+		outputQuantity = Math.min(throttled, getReturns(maxWorkers * Math.max(1,City.avgSkill[skill.ordinal()])));
+		outputQuantity = Math.min(outputQuantity, (City.economy.getExcessDemand(output) * outputQuantity / City.economy.getMaxSuppply(output.ordinal())))*scale;
+		inputQuantity = getCosts(outputQuantity);
 	}
 	
+	/**
+	 * Completely unthrottled version for finding max output
+	 */
 	public void reGuess() {
-		if(City.year > lastUpdated){
-			outputQuantity = getReturns(maxWorkers * Math.max(1,City.avgSkill[skill.ordinal()]));
-			inputQuantity = getCosts(outputQuantity);
-			lastUpdated = City.year;
-		}
-		
+		unthrottledOutputQuantity = getReturns(maxWorkers * Math.max(1,City.avgSkill[skill.ordinal()]));
+		unthrottledInputQuantity = getCosts(unthrottledOutputQuantity);
 	}
 	
-	public int getMaxWorkers(){
-		return maxWorkers;
+	/**
+	 * @return The number of workers required to get the appropriate output.
+	 */
+	public int getWorkers(){
+		return Math.min(maxWorkers,(int)Math.ceil(outputQuantity / efficency / City.avgSkill[skill.ordinal()]));
 	}
 	
-	public double getThrottle(double availResources){	//returns the maximum amount of effective OUTPUT given an available resource pool.
+	/**
+	 * Returns the maximum amount of effective OUTPUT given an available resource pool.
+	 */
+	public double getThrottle(double availResources){	
 		if (matEfficency == 0) return Double.POSITIVE_INFINITY;
 		return availResources * matEfficency;
 	}
@@ -128,5 +141,4 @@ public class Task {
 	public SkillType getSkill() {
 		return skill;
 	}
-
 }

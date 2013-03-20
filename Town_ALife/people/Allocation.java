@@ -2,18 +2,14 @@ package people;
 
 import city.Building;
 import city.Bundle;
-import city.City;
 import city.Factory;
 import city.ResourcePile;
-import city.ResourcePile.Resource;
-import economy.Economy;
 
 /**
  * Container for handling all things to do with setting aside resources for a purpose.  
  * @author Nathan Killeen
  */
 public class Allocation {
-	private static Economy economy = City.economy;
 	public Building building = null;
 	public Bundle resources = new Bundle();
 	public Bundle goal = new Bundle();
@@ -53,26 +49,24 @@ public class Allocation {
 	 * @return The bundle representing the new demand.
 	 */
 	public Bundle getDemand(double value){
-		value += resources.minus(goal).getValue();	//include the value of the over-stocking. Excess supply MUST be included externally.
+		value += resources.getValue();	//include the value of leftovers.
 		if (value <= 0) return new Bundle();	//no demand if we can't afford it.
-		Bundle demand = goal.minus(resources);
-		if (demand.contents.isEmpty()) return demand;
 
-		double mostExpensive = demand.getMostExpensiveValue();	//for use in reducing excess demand.
+		if (goal.contents.isEmpty()) return goal;
 		
-		double demandValue;
-		while ((demandValue = demand.getValue()) > value)	//may need 2 passes depending on rounding.
-		{
-			demand = demand.over(Math.max(((double)demandValue /(double)value),1.0D/(double)mostExpensive));	//will reduce by at least 1 of the most expensive units.
+		double costPerDemand = goal.getValue();
+		
+		Bundle affordable = goal.over(costPerDemand/value).minus(resources);	//no need to re-demand the leftover portions.)
+		
+		//check for effectively fulfilled
+		for(ResourcePile diff:affordable){
+			if (diff.amount < 0.05){ //close enough, just give it to them.
+				resources.insert(diff);
+				affordable.extract(new Bundle(diff));
+			}
 		}
 		
-		Resource cheapest = goal.getLeastExpensiveType();
-		double cheapPrice = economy.prices[cheapest.ordinal()];
-		if (demandValue < value + cheapPrice){
-			demand.insert(new ResourcePile(cheapest, (value-demandValue)/cheapPrice));	//add in some of the cheapest good to recover excess value.
-		}
-		
-		return demand;
+		return affordable;
 	}
 
 	/**
@@ -86,10 +80,11 @@ public class Allocation {
 	 * Sets up the planning of new buildings at a time in the future.
 	 * @param years The duration in which profit should be maximal.
 	 * @param genValue How much resources can be spent annually towards these plans.
+	 * @return 
 	 */
-	public void planBuilding(int years, double genValue){
+	public Bundle planBuilding(int years, double genValue, double greed){
 		Building planned = null;
-		double profit = 0;
+		double profit = 1 - greed; //must generate a minimum amount to be worth building
 		
 		if (genValue > 0){
 			double maxPrice = resources.getValue() + (genValue * years);
@@ -98,7 +93,7 @@ public class Allocation {
 				double currCost = curr.getCost().getValue(); 
 				if (currCost <= maxPrice){
 					int yearsToBuild = (int) (curr.getCost().minus(resources).getValue() / genValue);
-					curr.updateGuesses();
+					//curr.updateGuesses();
 					double currProfit = curr.getProfitability() * (years-yearsToBuild) - currCost;
 					if (currProfit > profit){
 						planned = curr;
@@ -111,10 +106,15 @@ public class Allocation {
 		adjustedProfitability = profit;
 		if(planned != null){
 			refreshGoal();
+			return null;
 		}
 		else{
 			goal = new Bundle(); 
+			Bundle temp = resources;
+			resources = new Bundle();
+			return temp;
 		}
+		
 	}
 	
 }
