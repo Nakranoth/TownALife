@@ -54,7 +54,7 @@ public class City {
 	private static int[] avgSkillHelper = new int[SkillType.values().length];
 	private static int workingPopSize = 0;
 	
-	int yearsToRun = 200;
+	int yearsToRun = 600;
 	private int toSave = 100;
 	private int feedback = 50;
 	
@@ -67,7 +67,7 @@ public class City {
 	public City() {
 		init();
 		Statistics.init();
-		while(year < yearsToRun && alive.size() > 4){
+		while(year < yearsToRun && alive.size() > 4 && alive.size() < 10000){
 			clearHelpers();
 			
 			//check for folded corps.
@@ -204,7 +204,7 @@ public class City {
 			year++;
 		}
 		//System.out.println("Year:" + year);
-		if(year >= yearsToRun && alive.size() >= feedback){
+		if(alive.size() >= feedback){
 			
 			System.out.println("Exit: "+alive.size()+","+year);
 			feedback = alive.size();

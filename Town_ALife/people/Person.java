@@ -178,7 +178,7 @@ public class Person{
 	public void readyAllocations(){
 		
 		//clean out income bundle.
-		income.cleanNegatives();
+		income.cleanBadValues();
 		
 		allocations[4].goal = computeOperationalCosts();	//Operational costs
 		allocations[4].demand = allocations[4].getDemand(income.getValue() * preferences.get(Preference.opCostCap));	//Now with a cap.
@@ -341,6 +341,10 @@ public class Person{
 			return;
 		}
 		double budget = newHomeBudget.resources.getValue();
+		if (budget + 1 <= budget){
+			newHomeBudget.resources.cleanBadValues();
+			budget = newHomeBudget.resources.getValue();
+		}
 		boolean bought = false;
 		for(Listing listing:City.listings){
 			if (listing.price > budget) break;	//cannot afford.

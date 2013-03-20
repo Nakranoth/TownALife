@@ -322,11 +322,15 @@ public class Bundle implements Iterable<ResourcePile>{
 		return this.times(scale);
 	}
 
-	public void cleanNegatives() {
+	/**
+	 * Gets rid of any weird negative or NaN values that managed
+	 * to sneak in here past the intended logic.
+	 */
+	public void cleanBadValues() {
 		Iterator<ResourcePile> i = contents.iterator();
 		while (i.hasNext()){
 			ResourcePile curr = i.next();
-			if (curr.amount <=0) i.remove();
+			if (curr.amount <=0|| curr.amount + 1 <= curr.amount) i.remove();
 		}
 	}
 }
