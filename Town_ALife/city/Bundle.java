@@ -150,7 +150,7 @@ public class Bundle implements Iterable<ResourcePile>{
 					break;
 				}
 			}
-			if(!enoughType) return false;
+			if(!enoughType) return false;	//I had none of this type
 		}
 		
 		return true;
