@@ -102,7 +102,7 @@ public class Task {
 	public void reGuess(Bundle resources, double scale){
 		double throttled = getThrottle(resources.getResource(input).amount);
 		outputQuantity = Math.min(throttled, getReturns(maxWorkers * Math.max(1,City.avgSkill[skill.ordinal()])));
-		outputQuantity = Math.min(outputQuantity, (City.economy.getExcessDemand(output) * outputQuantity / City.economy.getMaxSuppply(output.ordinal())))*scale;
+		//outputQuantity = Math.min(outputQuantity, (City.economy.getExcessDemand(output) * outputQuantity / City.economy.getMaxSuppply(output.ordinal())))*scale;
 		inputQuantity = getCosts(outputQuantity);
 	}
 	

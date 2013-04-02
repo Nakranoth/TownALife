@@ -5,11 +5,8 @@ import java.util.ArrayList;
 import people.Person;
 import city.Bundle;
 import city.City;
-import city.Factory;
 import city.ResourcePile;
 import city.ResourcePile.Resource;
-import city.Statistics;
-import city.Task;
 
 /**
  * Tracks prices, and matches quantities between supplies and demands. 
@@ -19,13 +16,13 @@ public class Economy {
 	public Double[] prices = {1.2,0.28,0.8,1.1,0.19,1.0,1.0,0.19};//new Double[Resource.values().length];
 	private Double[] smoothedRatios = {1.2,0.28,0.8,1.1,0.19,1.0,1.0,0.19};//new Double[Resource.values().length];
 	public Bundle demand = new Bundle(), supply = new Bundle();
-	private double[] marketMaxSupply = null;
+	//private double[] marketMaxSupply = null;
 	
 	/**
 	 * Must run after loading Factory.samples
 	 */
 	public Economy(){
-		marketMaxSupply = new double[Resource.values().length];
+	//	marketMaxSupply = new double[Resource.values().length];
 	}
 	
 	/**
@@ -55,7 +52,7 @@ public class Economy {
 	/**
 	 * Updates the supply maximums per factory type.
 	 */
-	public void updateMarketMaxSupply(){
+/*	public void updateMarketMaxSupply(){
 		marketMaxSupply = new double[Resource.values().length];
 		for (int i = 0; i < Factory.samples.size(); i++){
 			for (Task curr:Factory.samples.get(i).getTasks()){
@@ -63,15 +60,15 @@ public class Economy {
 				marketMaxSupply[curr.getOutput().type.ordinal()] += curr.getUnthrottledOutput().amount * Statistics.corpClass[i];
 			}
 		}
-	}
+	}*/
 	
 	/**
 	 * @param resourceOrdinal The ordinal of the resource in question
 	 * @return how much the city could produce if enough workers.
 	 */
-	public double getMaxSuppply(int resourceOrdinal){
+/*	public double getMaxSuppply(int resourceOrdinal){
 		return marketMaxSupply[resourceOrdinal];
-	}
+	}*/
 	
 	/**
 	 * Run before trading, after initializing allocations.

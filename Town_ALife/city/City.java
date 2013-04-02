@@ -54,7 +54,7 @@ public class City {
 	private static int[] avgSkillHelper = new int[SkillType.values().length];
 	private static int workingPopSize = 0;
 	
-	int yearsToRun = 600;
+	int yearsToRun = 400;
 	private int toSave = 100;
 	private int feedback = 50;
 	
@@ -77,7 +77,7 @@ public class City {
 				if(foldCheck.redistribute()||foldCheck.checkHoldings()) i.remove();
 			} 
 			
-			economy.updateMarketMaxSupply();
+			//economy.updateMarketMaxSupply();
 			
 			for(Person ready:alive){	//ready minimum wage and give resources to corps.
 				ready.preWorkInit();
@@ -287,7 +287,7 @@ public class City {
 					new ResourcePile(Resource.wood,10),
 					new ResourcePile(Resource.stone,10)
 			};
-			Person a =Person.loadPerson(loadFrom);
+			Person a = Person.loadPerson(loadFrom);//new Person(i % 2 == 0);//
 			a.realAge = 16;
 			a.effectiveAge = 16;
 			Home shack = new Shack();
